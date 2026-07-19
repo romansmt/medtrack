@@ -63,3 +63,12 @@ Merge branches, run through Postman/curl for the "existing SVNR" and "non-existi
 ---
 
 Order: TASK-00 → TASK-01 blocks TASK-02/03/04; Dev B can write TASK-05/07/08 against mocks without waiting for Dev A, but TASK-06 is coupled to TASK-04. That's usually enough to keep both branches from being idle.
+
+---
+
+### Deferred — domain/persistence split
+
+TASK-11 · Split domain model from JPA persistence
+`Patient`, `Doctor`, `Drug`, `Prescription` are JPA-annotated directly in `domain/` (TASK-01's simplification) instead of the layering in `MedTrack_Architecture.doc` (pure domain objects + separate `@Entity` classes/mappers under `infrastructure/persistence`). Revisit once the ÖGK slice works end-to-end: pull the JPA annotations out into persistence-only entities, add mappers, repoint TASK-04's repositories at the persistence entities.
+DoD: `domain` package has zero `jakarta.persistence` imports; all existing tests still pass.
+*Not blocking TASK-02–10 — deliberately deferred, tracked here so it isn't forgotten.*

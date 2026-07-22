@@ -24,8 +24,7 @@ DoD: after `docker-compose up`, realistic test data is visible in the database.
 
 TASK-04 · Spring Data repositories
 PatientRepository, PrescriptionRepository with a findByPatientSvnr(String svnr) method.
-DoD: a unit/slice test (`@DataJpaTest`) for lookup by SVNR passes.
-*Depends on TASK-01.*
+DoD: a unit/slice test (`@DataJpaTest`) for lookup by SVds on TASK-01.*
 
 ---
 

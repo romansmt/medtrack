@@ -133,19 +133,3 @@ The app likely failed to start — check its console output for a stack trace (i
 docker logs medtrack-postgres
 ```
 Read the tail of the log for the actual Postgres startup error.
-
-## 8. Implementation status
-
-Progress against the backlog in [TASKS.md](TASKS.md); see [PROGRESS.md](PROGRESS.md) for a detailed writeup of what each task actually built and why.
-
-| Task | Status | What it added |
-|---|---|---|
-| TASK-00 | Done | Scaffold — Spring Boot app, Docker Compose + Postgres, Flyway wired up, CI, health check |
-| TASK-01 | Done | `Patient`/`Doctor`/`Drug`/`Prescription` entities + `PrescriptionStatus` enum (`domain`) |
-| TASK-02 | Done | `V1__init_schema.sql` — schema for the four entities |
-| TASK-03 | Done | `V2__seed_demo_data.sql` — demo patients/doctors/drugs/prescriptions |
-| TASK-04 | Done | `PatientRepository`, `PrescriptionRepository` (`infrastructure.persistence`) |
-| TASK-05 | Done | `EHealthCardPort` interface + `EHealthCardSession` (`application.port`, `domain`) |
-| TASK-06 | Done | `MockEHealthCardAdapter`, `PatientNotFoundException` |
-| TASK-07–10 | Not started | Service layer, REST controller, integration test, merge |
-| TASK-11 | Deferred | Split domain entities from JPA persistence — not blocking |

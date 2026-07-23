@@ -1,6 +1,6 @@
 # Implementation progress
 
-Detailed writeup of what each task in [TASKS.md](TASKS.md) actually built, and the reasoning behind non-obvious decisions. See [DEVELOPMENT.md](DEVELOPMENT.md#8-implementation-status) for the quick-glance status table.
+Detailed writeup of what each task in [TASKS.md](TASKS.md) actually built, and the reasoning behind non-obvious decisions.
 
 ## TASK-00 · Scaffold
 
@@ -102,3 +102,73 @@ Done — all 10 tests pass (`Tests run: 10, Failures: 0, Errors: 0`), `BUILD SUC
 * `PrescriptionControllerIntegrationTest.java` (`api`, test source) — a genuine end-to-end test: real Postgres via Testcontainers (`@ServiceConnection`, same pattern as `MedtrackApplicationTests`), real Flyway migration (V1 schema + V2 seed data, both applied automatically on context startup), a real embedded Tomcat on a random port (`@SpringBootTest(webEnvironment = RANDOM_PORT)`), and real HTTP GET requests via `TestRestTemplate`. This is the automated version of the manual curl verification done for TASK-08.
 * Two cases: a known SVNR (`1234010190`, Anna Gruber) returns 200 with her exact 2 seeded prescriptions — asserted by deserializing straight into `PrescriptionResponse[]` and comparing structurally (`containsExactlyInAnyOrder`), reusing the DTO record's own equality rather than fragile substring-matching on raw JSON; an unknown SVNR returns 404, confirming the whole `PatientNotFoundException` → `ApiExceptionHandler` → HTTP chain holds end-to-end, not just in the isolated unit tests from TASK-06/07.
 * Kept as its own test class rather than folded into `MedtrackApplicationTests` — that one stays a minimal smoke test for `/actuator/health`, matching its original TASK-00 scope, since TASK-09 is its own distinct backlog item testing the ÖGK feature specifically.
+
+---
+
+# Phase 2 — ApoScout + ApoApp feature build
+
+Extends the ÖGK slice with the pharmacy-locator, medication-availability, pricing, and adherence-tracking features from the architecture doc, combining the functionality/UX of two real Austrian pharmacy apps (ApoScout, ApoApp). Scope decisions for this phase: no real login yet (a demo patient-selector stands in), desktop/laptop-first frontend (not phone-styled), reminders computed live with no persisted `Notification`/scheduler. See [TASKS.md](TASKS.md) for the full Phase 2 backlog. No more Dev A/Dev B split — solo, sequential.
+
+## TASK-12 · Pharmacy domain entities
+
+Done — compiles clean; schema match confirmed once TASK-13/14's migrations were verified (see below).
+
+* `Pharmacy`, `PharmacyOpeningHours`, `PharmacyInventory` in `com.medtrack.domain`, plus a small `OpeningHoursKind` enum (`REGULAR` / `ON_CALL`) and a `Coordinates` record (`latitude`, `longitude`) shared with TASK-15's `GeoPort`.
+* Same style as the existing entities: JPA-annotated directly in `domain` (no separate persistence layer — consistent with the TASK-11-deferred simplification), constructor + explicit getters/setters, no Lombok.
+* `PharmacyOpeningHours` models both a pharmacy's regular weekly hours and its on-call/emergency-duty (Bereitschaftsdienst) hours in one table, distinguished by `kind` — a shift spanning midnight is stored as two same-day rows rather than one cross-midnight range, matching how the reference app itself displays it.
+* `PharmacyInventory.price` is `BigDecimal` (`precision = 10, scale = 2`), unlike most of the codebase's plain types — money arithmetic on `double` is a real correctness risk, worth the one exception.
+* `PharmacyInventory.lastUpdated` (`Instant`) exists specifically so TASK-16's `StockRefreshJob` has something to touch, simulating a live per-pharmacy stock feed.
+
+## TASK-13 · Flyway pharmacy schema + seed data (`V3`, `V5`)
+
+Done — verified via `mvn test`: all 5 migrations (`V1`–`V5`) apply cleanly against a fresh Testcontainers Postgres, and Hibernate's `ddl-auto: validate` passes against the new entities.
+
+* `V3__pharmacy_schema.sql` — `pharmacy`, `pharmacy_opening_hours`, `pharmacy_inventory` tables, following `V1`'s conventions (snake_case columns, named `pk_`/`fk_` constraints, FK-dependency ordering). Indexes on both FK columns of `pharmacy_inventory` and on `pharmacy_opening_hours.pharmacy_id`, since both are looked up by pharmacy/drug id in the hot paths (`PharmacyService`, `AvailabilityService`).
+* `V5__pharmacy_seed_data.sql` (not `V4` — see the numbering note below) — 8 fictional Vienna-area pharmacies (original invented names/addresses, not the real pharmacies visible in the ApoScout reference screenshots), regular Mon–Fri/Sat hours for all 8, plus a 7-pharmacy on-call rotation covering every overnight/Sunday gap so "who's on duty right now" always has an answer regardless of when the app is run. 4 "full service" pharmacies stock all 12 catalog drugs, 4 smaller ones stock a subset; a handful of rows are deliberately `in_stock = FALSE` (carried but currently out) rather than omitted (not carried at all) — both states are meaningful for the availability-check feature.
+* **Numbering note:** `V5` seeds pharmacy inventory by joining against `drug.pzn`, which only exists once `V4` (TASK-14's drug catalog extension) has run — so the seed data had to be sequenced *after* the catalog extension, not before it as originally planned. Renumbered to `V3` = schema, `V4` = drug extension (TASK-14), `V5` = pharmacy seed, rather than keeping TASK-13's two pieces adjacent.
+* **Bug caught and fixed during verification:** the first inventory `INSERT` block (`Apotheke Zum Goldenen Loewen`) referenced the seed price column as `d.base_price` instead of `base.base_price` — a copy-paste-forward typo from an early draft that the other 7 blocks didn't repeat. Failed with Postgres error `42703 column d.base_price does not exist`; caught by `mvn test` (Testcontainers, random port), which is what proved a subsequent `mvn spring-boot:run` failure against the real docker-compose DB was hitting the *same* bug rather than a port collision, even though the symptom briefly looked identical to one.
+
+## TASK-14 · Drug catalog extension (`V4`)
+
+Done — same verification as TASK-13 (part of the same `mvn test` run).
+
+* Extended `Drug` (previously just `name`/`activeSubstance`) with `form`, `packSize`, `manufacturer`, `prescriptionRequired`, `pzn` (fake Pharmazentralnummer, unique), and `packageLeafletText` — needed because real medication-availability search results show multiple catalog rows per drug name (different strengths/pack sizes/manufacturers), and `PricingService` (TASK-20) needs to branch on prescription-required vs. OTC.
+* `V4__drug_catalog_extension.sql` — additive `ALTER TABLE` (nullable columns first), backfills the existing 6 seeded drugs with real-shaped values, adds `NOT NULL`/`UNIQUE(pzn)` constraints after backfill, then inserts 6 new catalog rows (a second Paracetamol pack size, an infusion-solution variant, 3 new active substances) for search variety.
+* Updated the two existing tests that constructed `Drug` directly (`PrescriptionRepositoryTest`, `PrescriptionServiceTest`) to the new 8-arg constructor rather than keeping a legacy 2-arg overload around.
+
+## TASK-15 · `GeoPort` + `NominatimGeoAdapter` + Haversine helper
+
+Done — compiles clean; the Nominatim call itself was exercised manually (see DEVELOPMENT.md §4.4), not by an automated test, since asserting on a real third-party API's response isn't a meaningful unit/integration test.
+
+* `GeoPort` (`application.port`) — one method, `Optional<Coordinates> geocode(String address)`.
+* `NominatimGeoAdapter` (`infrastructure.geo`) — the project's first **real**, non-mocked integration: calls the public Nominatim/OpenStreetMap geocoding API directly via Spring's `RestClient` (no new dependency — already transitively available via `spring-boot-starter-web` since Boot 3.2). Sends an identifying `User-Agent` with no personal data in it (Nominatim's usage policy asks for one), and is only ever called on an explicit "set location" submission from the frontend — never per keystroke, respecting the ~1 req/sec usage policy.
+* `DistanceCalculator` (`application.service`) — stateless Haversine implementation, used by `PharmacyService` to compute/sort by distance from a given `Coordinates` origin.
+* Browser geolocation (planned for TASK-26+) covers "use my current location" without touching this port at all — `GeoPort` exists specifically for the manual "type an address" path.
+
+## TASK-16 · `PharmacyStockPort` + `PharmacyService` + `StockRefreshJob`
+
+Done — compiles clean, manually verified via the `/api/pharmacies/nearby`, `/on-call`, and `/{id}` endpoints (DEVELOPMENT.md §4.4).
+
+* `PharmacyStockPort`/`MockPharmacyStockAdapter` (`infrastructure.stock`) — thin repository wrapper, same shape as `EHealthCardPort`/`MockEHealthCardAdapter`: even a simple repository-backed lookup gets a port/adapter pair, keeping the "this could be swapped for a real feed later" boundary explicit.
+* `PharmacyService` (`application.service`) — `findNearby` (radius filter + distance sort), `findOnCallNow` (filters to pharmacies with an `ON_CALL` opening-hours row matching right now), `getDetail` (pharmacy + full sorted opening-hours list), `geocode` (thin pass-through to `GeoPort`). "Open now"/"on call now" are computed by checking the current day-of-week/time against each pharmacy's `PharmacyOpeningHours` rows — no separate "is open" flag stored anywhere.
+* `StockRefreshJob` (`api.scheduler`, `@Scheduled(fixedRate = 60_000)`) — simulates a live per-pharmacy stock feed (the architecture doc's "stock refresh" cross-cutting concern) by jittering ~10% of inventory rows' `in_stock` flag and touching `lastUpdated` every minute, so the frontend's future "last updated" freshness line actually moves during a demo. Added `@EnableScheduling` to `MedtrackApplication` for this.
+
+## TASK-17 · `AvailabilityService`
+
+Done — compiles clean, manually verified via `POST /api/availability/check` (DEVELOPMENT.md §4.4).
+
+* Takes a "selection list" (`List<AvailabilityRequestItem>`, i.e. drug id + quantity pairs) and an origin, and returns one result per *nearby* pharmacy (reuses `PharmacyService.findNearby` as the base set, matching how the reference app lists all nearby pharmacies and overlays availability rather than only showing pharmacies that happen to stock something).
+* Per pharmacy: an `allAvailable` flag plus a per-item breakdown (drug name/form/pack size, requested quantity, in-stock, price). A missing inventory row (pharmacy doesn't carry that drug at all) and an `in_stock = false` row (carried but currently out) both resolve to "not available" for the item, but stay distinguishable in the underlying data.
+
+## TASK-18 · REST controllers — Patient/Pharmacy/Drug/Availability
+
+Done — verified against a real running instance (DEVELOPMENT.md §4.4): all new endpoints return the expected shapes, unknown-id lookups return 404.
+
+* `PatientController` (`GET /api/patients`) — new; nothing previously exposed a way to list patients at all. Needed for the frontend's planned "pick a demo patient" selector, the lightweight stand-in for real login for this phase.
+* `DrugController` — search (`GET /api/drugs/search?q=`), detail (`GET /api/drugs/{id}`), leaflet (`GET /api/drugs/{id}/leaflet`).
+* `PharmacyController` — nearby (`GET /api/pharmacies/nearby`), on-call (`GET /api/pharmacies/on-call`), detail (`GET /api/pharmacies/{id}`), geocode (`GET /api/pharmacies/geocode`).
+* `AvailabilityController` — `POST /api/availability/check`.
+* Extended `ApiExceptionHandler` with a `NoSuchElementException` → 404 handler (thrown by `PharmacyService`/`DrugService` for unknown ids), alongside the existing `PatientNotFoundException` handler.
+* All four follow the existing `PrescriptionController` shape exactly: thin controller delegating to a service, Swagger `@Tag`/`@Operation` annotations, one `@RequestMapping` base path per resource.
+
+**Troubleshooting note worth keeping:** while verifying this phase, `mvn spring-boot:run` failed twice for two *unrelated* reasons that briefly looked like the same problem — first the real `V5` SQL bug above, then (after fixing it) a stale `java` process from ~18 hours earlier still squatting on port 8080. `mvn test` (Testcontainers, always a random port) was the deciding diagnostic both times: it isolates "the code is actually broken" from "something local/environmental is in the way." See DEVELOPMENT.md §7 for the generalized version of this.

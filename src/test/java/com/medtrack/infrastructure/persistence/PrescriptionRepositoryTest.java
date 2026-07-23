@@ -39,7 +39,8 @@ class PrescriptionRepositoryTest {
     void findByPatientSvnrReturnsOnlyThatPatientsPrescriptions() {
         Patient patient = entityManager.persist(new Patient("9999999999", "Test Patient"));
         Doctor doctor = entityManager.persist(new Doctor("Dr. Test", "General Practitioner"));
-        Drug drug = entityManager.persist(new Drug("TestDrug", "Test Substance"));
+        Drug drug = entityManager.persist(new Drug("TestDrug", "Test Substance", "Tabletten", "10 ST",
+                "Test Pharma GmbH", false, "99999999", null));
         entityManager.persist(new Prescription(patient, doctor, drug, "1 tablet daily",
                 LocalDate.of(2026, 1, 1), PrescriptionStatus.OPEN));
         entityManager.flush();

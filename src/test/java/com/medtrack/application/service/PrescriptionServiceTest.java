@@ -39,7 +39,8 @@ class PrescriptionServiceTest {
         String svnr = "1234010190";
         Patient patient = new Patient(svnr, "Anna Gruber");
         Doctor doctor = new Doctor("Dr. Julia Steiner", "General Practitioner");
-        Drug drug = new Drug("Aspirin", "Acetylsalicylic acid");
+        Drug drug = new Drug("Aspirin", "Acetylsalicylic acid", "Tabletten", "20 ST",
+                "Bayer Austria GmbH", false, "12345678", null);
         Prescription prescription = new Prescription(patient, doctor, drug, "1 tablet daily",
                 LocalDate.of(2026, 6, 1), PrescriptionStatus.OPEN);
 

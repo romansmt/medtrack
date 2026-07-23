@@ -112,6 +112,59 @@ Invoke-WebRequest http://localhost:8080/actuator/health
 
 Expect: status `200`, body `{"status":"UP"}`. Stop the app with `Ctrl+C` in the first window, then `docker compose down` when you're done.
 
+### 4.4 Verifying Phase 2A (pharmacy locator, drug catalog, availability check)
+
+Same "app running for real" setup as 4.3 (`docker compose up -d`, `& $mvn spring-boot:run` in one terminal), then run these in a **second** terminal. Coordinates below (`48.2082, 16.3719`) are central Vienna, near the seeded "Apotheke Zum Goldenen Loewen".
+
+```powershell
+Invoke-WebRequest http://localhost:8080/api/patients | Select-Object -ExpandProperty Content
+```
+Expect: the 4 seeded demo patients (id, svnr, name).
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/drugs/search?q=Paracetamol" | Select-Object -ExpandProperty Content
+```
+Expect: multiple catalog rows (different pack sizes/manufacturers), not just one.
+
+```powershell
+Invoke-WebRequest http://localhost:8080/api/drugs/1 | Select-Object -ExpandProperty Content
+Invoke-WebRequest http://localhost:8080/api/drugs/1/leaflet | Select-Object -ExpandProperty Content
+```
+Expect: Aspirin's catalog detail, then its simulated leaflet text.
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/pharmacies/nearby?lat=48.2082&lng=16.3719&radiusKm=10" | Select-Object -ExpandProperty Content
+```
+Expect: all 8 seeded pharmacies, sorted by `distanceKm` ascending.
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/pharmacies/on-call?lat=48.2082&lng=16.3719" | Select-Object -ExpandProperty Content
+```
+Expect: at least one pharmacy, regardless of what day/time it is now — the seeded on-call rotation covers every hour of every day.
+
+```powershell
+Invoke-WebRequest http://localhost:8080/api/pharmacies/1 | Select-Object -ExpandProperty Content
+```
+Expect: pharmacy detail with its full sorted weekly + on-call hours list.
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/pharmacies/geocode?address=Stephansplatz%201%20Wien" | Select-Object -ExpandProperty Content
+```
+Expect: a real lat/lng from the live Nominatim API (this is the one real external network call in the project — requires internet access, and is slower than the others).
+
+```powershell
+$body = @{ items = @(@{ drugId = 3; quantity = 1 }, @{ drugId = 1; quantity = 2 }); latitude = 48.2082; longitude = 16.3719; radiusKm = 10 } | ConvertTo-Json -Depth 5
+Invoke-WebRequest -Uri http://localhost:8080/api/availability/check -Method POST -Body $body -ContentType "application/json" | Select-Object -ExpandProperty Content
+```
+Expect: one entry per nearby pharmacy, each with an `allAvailable` flag and a 2-item breakdown (drug id 3 = Paracetamol, drug id 1 = Aspirin).
+
+```powershell
+try { Invoke-WebRequest http://localhost:8080/api/pharmacies/9999 } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
+```
+Expect: `STATUS=404`.
+
+Then check Swagger UI (`http://localhost:8080/swagger-ui/index.html`) — should now show 5 tags: ÖGK prescriptions, Patients, Drugs, Pharmacies, Availability.
+
 ## 5. Project structure
 
 ```
@@ -188,6 +241,14 @@ $conn = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction Silently
 if ($conn) { Stop-Process -Id $conn.OwningProcess -Force }
 ```
 A full machine restart also clears this unconditionally, since no background process survives a reboot — but it's overkill for just this.
+
+**`mvn spring-boot:run` fails fast with a generic `MojoExecutionException` / `Process terminated with exit code: 1`, and the pasted output doesn't show why**
+This is just Maven's own summary line — the real cause is a Spring Boot exception earlier in the *same* console output, easy to miss if only the tail got pasted or piped through something like `Select-Object -Last N`. Two distinct causes produce this identical-looking failure:
+
+1. **Port 8080 already bound** (see the stale-process entry above) — Tomcat fails to bind and the app exits within a couple seconds.
+2. **A Flyway migration is actually broken** (bad SQL, a bad column reference, etc.) — fails during context startup, also within a couple seconds.
+
+The fastest way to tell them apart: run `& $mvn test` instead. It uses Testcontainers, which always picks a random free port, so it's immune to cause #1 — if `mvn test` also fails, the problem is a genuine bug in the code/migrations, not a local port collision, and the real Postgres error (Flyway prints the failing SQL, the exact error, and the line number) will be in that output instead of buried under a generic Maven summary.
 
 **`docker compose up` fails, or containers won't start**
 Check Docker Desktop is actually running:

@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +38,10 @@ public class AvailabilityService {
         List<Long> drugIds = items.stream().map(AvailabilityRequestItem::drugId).toList();
         Map<Long, Drug> drugsById = drugRepository.findAllById(drugIds).stream()
                 .collect(Collectors.toMap(Drug::getId, drug -> drug));
+
+        if (drugsById.size() != drugIds.size()) {
+            throw new NoSuchElementException("One or more requested drug ids do not exist");
+        }
 
         Map<Long, Map<Long, PharmacyInventory>> inventoryByPharmacyThenDrug =
                 pharmacyStockPort.findStockForDrugs(drugIds).stream()

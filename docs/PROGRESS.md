@@ -172,3 +172,11 @@ Done — verified against a real running instance (DEVELOPMENT.md §4.4): all ne
 * All four follow the existing `PrescriptionController` shape exactly: thin controller delegating to a service, Swagger `@Tag`/`@Operation` annotations, one `@RequestMapping` base path per resource.
 
 **Troubleshooting note worth keeping:** while verifying this phase, `mvn spring-boot:run` failed twice for two *unrelated* reasons that briefly looked like the same problem — first the real `V5` SQL bug above, then (after fixing it) a stale `java` process from ~18 hours earlier still squatting on port 8080. `mvn test` (Testcontainers, always a random port) was the deciding diagnostic both times: it isolates "the code is actually broken" from "something local/environmental is in the way." See DEVELOPMENT.md §7 for the generalized version of this.
+
+## TASK-19 · Testcontainers integration test for the availability flow
+
+Done — all 12 tests pass (`Tests run: 12, Failures: 0, Errors: 0`), `BUILD SUCCESS`.
+
+* `AvailabilityControllerIntegrationTest.java` (`api`, test source) — same shape as `PrescriptionControllerIntegrationTest`: real Postgres via Testcontainers, real Flyway migrations, real embedded Tomcat on a random port, real HTTP via `TestRestTemplate` (`postForEntity` this time, since the endpoint is a POST with a JSON body).
+* Two cases: (1) a known drug (Aspirin, id 1) checked from the exact seeded coordinates of "Apotheke Zum Goldenen Loewen" returns all 8 seeded pharmacies within a 10km radius, sorted by distance, with the closest one asserted by name/distance/price/in-stock against the actual `V5` seed values — not just "some response came back"; (2) an unknown drug id returns 404.
+* **Bug caught and fixed while writing this test:** `AvailabilityService.checkAvailability` looked up requested drugs via `drugRepository.findAllById(...)` but never checked whether every requested id actually came back — an unknown drug id would silently produce a `null` `Drug` that then NPE'd inside `toItemResult`, surfacing as a bare 500 rather than a clean 404. Fixed by comparing the resolved-drug count against the requested-id count upfront and throwing the same `NoSuchElementException` that `PharmacyService`/`DrugService` already use for unknown ids (already wired to 404 via `ApiExceptionHandler` since TASK-18) — no new exception type needed.

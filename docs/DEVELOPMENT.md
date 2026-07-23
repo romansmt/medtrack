@@ -51,7 +51,7 @@ $mvn = "C:\Program Files\JetBrains\IntelliJ IDEA 2025.2.4\plugins\maven\lib\mave
 ```powershell
 & $mvn test
 ```
-Expect: `Tests run: 8, Failures: 0, Errors: 0`, `BUILD SUCCESS`.
+Expect: `Tests run: 10, Failures: 0, Errors: 0`, `BUILD SUCCESS`.
 
 ```powershell
 & $mvn spring-boot:run
@@ -92,7 +92,7 @@ Expect: `BUILD SUCCESS`.
 ```powershell
 & $mvn test
 ```
-Expect: `Tests run: 8, Failures: 0, Errors: 0` and `BUILD SUCCESS`.
+Expect: `Tests run: 10, Failures: 0, Errors: 0` and `BUILD SUCCESS`.
 
 This test uses **Testcontainers**: it starts its own throwaway Postgres container, runs Flyway migrations against it, boots the full Spring context, and checks that `/actuator/health` returns `200`. A pass here is strong evidence the whole stack works, independent of anything below.
 

@@ -94,3 +94,11 @@ Done — verified against a live, packaged instance of the app (not just `mvn te
   * `GET /api/oegk/1234010190/prescriptions` → `200`, returned exactly Anna Gruber's 2 prescriptions from the seed data.
   * `GET /api/oegk/0000000000/prescriptions` → `404`.
   * `GET /v3/api-docs` → `200`, with the generated spec correctly showing the tag, summary, and both documented response codes.
+
+## TASK-09 · Testcontainers integration test
+
+Done — all 10 tests pass (`Tests run: 10, Failures: 0, Errors: 0`), `BUILD SUCCESS`.
+
+* `PrescriptionControllerIntegrationTest.java` (`api`, test source) — a genuine end-to-end test: real Postgres via Testcontainers (`@ServiceConnection`, same pattern as `MedtrackApplicationTests`), real Flyway migration (V1 schema + V2 seed data, both applied automatically on context startup), a real embedded Tomcat on a random port (`@SpringBootTest(webEnvironment = RANDOM_PORT)`), and real HTTP GET requests via `TestRestTemplate`. This is the automated version of the manual curl verification done for TASK-08.
+* Two cases: a known SVNR (`1234010190`, Anna Gruber) returns 200 with her exact 2 seeded prescriptions — asserted by deserializing straight into `PrescriptionResponse[]` and comparing structurally (`containsExactlyInAnyOrder`), reusing the DTO record's own equality rather than fragile substring-matching on raw JSON; an unknown SVNR returns 404, confirming the whole `PatientNotFoundException` → `ApiExceptionHandler` → HTTP chain holds end-to-end, not just in the isolated unit tests from TASK-06/07.
+* Kept as its own test class rather than folded into `MedtrackApplicationTests` — that one stays a minimal smoke test for `/actuator/health`, matching its original TASK-00 scope, since TASK-09 is its own distinct backlog item testing the ÖGK feature specifically.

@@ -165,7 +165,115 @@ Expect: `STATUS=404`.
 
 Then check Swagger UI (`http://localhost:8080/swagger-ui/index.html`) — current full tag list (grows as later phases land; see §4.5+ below): ÖGK prescriptions, Patients, Drugs, Pharmacies, Availability, Favorites, Reservations, Medication schedule.
 
-### 4.5 Verifying Phase 2D (medication schedule / adherence tracking)
+### 4.5 Verifying Phase 2B (pricing & comparison)
+
+Same setup as 4.3/4.4.
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/drugs/1/compare?lat=48.2082&lng=16.3719&radiusKm=10" | Select-Object -ExpandProperty Content
+```
+Expect: 8 entries, cheapest `VitaNova-Apotheke` at `4.30`, priciest `Apotheke Zur Alten Muehle` at `4.75` — Aspirin is OTC, so price genuinely varies by pharmacy.
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/drugs/4/compare?lat=48.2082&lng=16.3719&radiusKm=10" | Select-Object -ExpandProperty Content
+```
+Expect: 6 entries (2 of the 8 pharmacies don't carry Amoxicillin at all, so they're absent from the list, not shown as unavailable), every `price` is `7.55` (the flat Rezeptgebühr, since it's prescription-required — unlike Aspirin, the price does *not* vary by pharmacy), and `Stadtapotheke Wien-Mitte`'s entry shows `"inStock":false` while the rest show `true`.
+
+```powershell
+try { Invoke-WebRequest "http://localhost:8080/api/drugs/999999/compare?lat=48.2082&lng=16.3719" } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
+```
+Expect: `STATUS=404`.
+
+Swagger UI should show `/compare` listed under the existing **Drugs** tag (no new tag — this phase only added an endpoint to an existing controller).
+
+### 4.6 Verifying Phase 2C (favorites & reservations)
+
+Same setup as 4.3/4.4. Patient: Anna Gruber (`1234010190`). Pharmacy id `1` ("Apotheke Zum Goldenen Loewen") supports reservations; pharmacy id `4` ("Apotheke Zur Blauen Schwalbe") doesn't — used below to exercise the rejection case.
+
+Favorite pharmacies:
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/patients/1234010190/favorite-pharmacies" | Select-Object -ExpandProperty Content
+```
+Expect: `[]`.
+
+```powershell
+$response = Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/favorite-pharmacies/1" -Method POST
+Write-Output "STATUS=$($response.StatusCode)"
+```
+Expect: `STATUS=204`.
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/patients/1234010190/favorite-pharmacies" | Select-Object -ExpandProperty Content
+```
+Expect: one entry, "Apotheke Zum Goldenen Loewen".
+
+```powershell
+$response = Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/favorite-pharmacies/1" -Method POST
+Write-Output "STATUS=$($response.StatusCode)"
+```
+Expect: `STATUS=204` again — re-favoriting the same pharmacy is idempotent, not an error and not a duplicate.
+
+```powershell
+$response = Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/favorite-pharmacies/1" -Method DELETE
+Write-Output "STATUS=$($response.StatusCode)"
+Invoke-WebRequest "http://localhost:8080/api/patients/1234010190/favorite-pharmacies" | Select-Object -ExpandProperty Content
+```
+Expect: `STATUS=204`, then `[]` again.
+
+Favorite drugs (same pattern, briefer):
+```powershell
+Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/favorite-drugs/1" -Method POST
+Invoke-WebRequest "http://localhost:8080/api/patients/1234010190/favorite-drugs" | Select-Object -ExpandProperty Content
+Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/favorite-drugs/1" -Method DELETE
+```
+Expect: after the `POST`, the list shows Aspirin; after the `DELETE` it's empty again.
+
+Reservations — create one, noting the returned `id` for the cancel step below:
+```powershell
+$body = @{ pharmacyId = 1; drugId = 1; quantity = 2 } | ConvertTo-Json
+$response = Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/reservations" -Method POST -Body $body -ContentType "application/json"
+Write-Output "STATUS=$($response.StatusCode)"
+Write-Output $response.Content
+```
+Expect: `STATUS=200`, body shows `"status":"REQUESTED"` at "Apotheke Zum Goldenen Loewen".
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/patients/1234010190/reservations" | Select-Object -ExpandProperty Content
+```
+Expect: the reservation just created.
+
+Rejected at a pharmacy that doesn't support reservations:
+```powershell
+$body = @{ pharmacyId = 4; drugId = 1; quantity = 1 } | ConvertTo-Json
+try {
+    Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/reservations" -Method POST -Body $body -ContentType "application/json"
+} catch {
+    Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)"
+    $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+    Write-Output "BODY=$($reader.ReadToEnd())"
+}
+```
+Expect: `STATUS=400`, body mentioning "Apotheke Zur Blauen Schwalbe".
+
+Cancel the reservation created above:
+```powershell
+$reservationId = 1   # set this to the id the create response actually returned, not a placeholder
+$response = Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/reservations/$reservationId" -Method DELETE
+Write-Output "STATUS=$($response.StatusCode)"
+Invoke-WebRequest "http://localhost:8080/api/patients/1234010190/reservations" | Select-Object -ExpandProperty Content
+```
+Expect: `STATUS=204`; the reservation is still listed, now with `"status":"CANCELLED"` (cancelling keeps history, doesn't delete the row).
+
+Error cases:
+```powershell
+try { Invoke-WebRequest "http://localhost:8080/api/patients/0000000000/favorite-pharmacies" } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
+try { Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/favorite-pharmacies/9999" -Method POST } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
+```
+Expect: both `STATUS=404`.
+
+Swagger UI should show new **Favorites** and **Reservations** tags.
+
+### 4.7 Verifying Phase 2D (medication schedule / adherence tracking)
 
 Same setup as 4.3/4.4. Patients: Anna Gruber (`1234010190`, once-daily Aspirin, 3 days of seeded history), Max Bauer (`2345020285`, twice-daily Metformin), Paul Wagner (`4567040475`, no schedule at all — the empty-state case).
 

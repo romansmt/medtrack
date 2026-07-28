@@ -24,12 +24,14 @@ public class AvailabilityService {
     private final PharmacyService pharmacyService;
     private final PharmacyStockPort pharmacyStockPort;
     private final DrugRepository drugRepository;
+    private final PricingService pricingService;
 
     public AvailabilityService(PharmacyService pharmacyService, PharmacyStockPort pharmacyStockPort,
-                                DrugRepository drugRepository) {
+                                DrugRepository drugRepository, PricingService pricingService) {
         this.pharmacyService = pharmacyService;
         this.pharmacyStockPort = pharmacyStockPort;
         this.drugRepository = drugRepository;
+        this.pricingService = pricingService;
     }
 
     @Transactional(readOnly = true)
@@ -71,7 +73,7 @@ public class AvailabilityService {
 
     private AvailabilityItemResult toItemResult(AvailabilityRequestItem item, Drug drug, PharmacyInventory inventory) {
         boolean inStock = inventory != null && inventory.isInStock();
-        BigDecimal price = inventory != null ? inventory.getPrice() : null;
+        BigDecimal price = pricingService.getPrice(drug, inventory);
 
         return new AvailabilityItemResult(item.drugId(), drug.getName(), drug.getForm(), drug.getPackSize(),
                 item.quantity(), inStock, price);

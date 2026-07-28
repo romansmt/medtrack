@@ -192,4 +192,4 @@ Update README/TASKS/PROGRESS; add a short doc mapping ApoScout/ApoApp features �
 
 ---
 
-Status: TASK-12–19 done (see PROGRESS.md for the detailed writeup); TASK-20 onward not started.
+Status: TASK-12–21 done (see PROGRESS.md for the detailed writeup); TASK-22 onward not started.

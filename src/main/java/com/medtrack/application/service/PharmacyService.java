@@ -75,6 +75,19 @@ public class PharmacyService {
                 .orElseThrow(() -> new NoSuchElementException("Could not resolve address: " + address));
     }
 
+    @Transactional(readOnly = true)
+    public List<PharmacyResponse> findByIds(List<Long> pharmacyIds) {
+        List<Pharmacy> pharmacies = pharmacyRepository.findAllById(pharmacyIds);
+        Map<Long, List<PharmacyOpeningHours>> hoursByPharmacy = openingHoursRepository.findByPharmacyIdIn(pharmacyIds)
+                .stream()
+                .collect(Collectors.groupingBy(h -> h.getPharmacy().getId()));
+        LocalDateTime now = LocalDateTime.now();
+
+        return pharmacies.stream()
+                .map(p -> toResponse(p, hoursByPharmacy.getOrDefault(p.getId(), List.of()), null, now))
+                .toList();
+    }
+
     private List<PharmacyResponse> allWithDistance(Coordinates origin) {
         List<Pharmacy> pharmacies = pharmacyRepository.findAll();
         List<Long> ids = pharmacies.stream().map(Pharmacy::getId).toList();

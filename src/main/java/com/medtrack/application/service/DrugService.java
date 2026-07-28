@@ -37,6 +37,13 @@ public class DrugService {
         return new DrugLeafletResponse(drug.getId(), drug.getName(), drug.getPackageLeafletText());
     }
 
+    @Transactional(readOnly = true)
+    public List<DrugResponse> getByIds(List<Long> ids) {
+        return drugRepository.findAllById(ids).stream()
+                .map(DrugService::toResponse)
+                .toList();
+    }
+
     private Drug findOrThrow(Long id) {
         return drugRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("No drug for id " + id));

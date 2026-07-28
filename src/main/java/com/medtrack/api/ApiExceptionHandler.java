@@ -1,6 +1,7 @@
 package com.medtrack.api;
 
 import com.medtrack.domain.PatientNotFoundException;
+import com.medtrack.domain.ReservationNotSupportedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,5 +20,10 @@ public class ApiExceptionHandler {
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Void> handleNotFound() {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+
+    @ExceptionHandler(ReservationNotSupportedException.class)
+    public ResponseEntity<String> handleReservationNotSupported(ReservationNotSupportedException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
     }
 }

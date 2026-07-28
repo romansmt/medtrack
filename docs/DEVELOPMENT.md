@@ -163,7 +163,73 @@ try { Invoke-WebRequest http://localhost:8080/api/pharmacies/9999 } catch { Writ
 ```
 Expect: `STATUS=404`.
 
-Then check Swagger UI (`http://localhost:8080/swagger-ui/index.html`) — should now show 5 tags: ÖGK prescriptions, Patients, Drugs, Pharmacies, Availability.
+Then check Swagger UI (`http://localhost:8080/swagger-ui/index.html`) — current full tag list (grows as later phases land; see §4.5+ below): ÖGK prescriptions, Patients, Drugs, Pharmacies, Availability, Favorites, Reservations, Medication schedule.
+
+### 4.5 Verifying Phase 2D (medication schedule / adherence tracking)
+
+Same setup as 4.3/4.4. Patients: Anna Gruber (`1234010190`, once-daily Aspirin, 3 days of seeded history), Max Bauer (`2345020285`, twice-daily Metformin), Paul Wagner (`4567040475`, no schedule at all — the empty-state case).
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/patients/1234010190/medication-schedule" | Select-Object -ExpandProperty Content
+Invoke-WebRequest "http://localhost:8080/api/patients/4567040475/medication-schedule" | Select-Object -ExpandProperty Content
+```
+Expect: Anna Gruber shows one schedule (Aspirin, "1 Tablette", one `08:00:00` time); Paul Wagner returns `[]`.
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/patients/1234010190/medication-schedule/due-today" | Select-Object -ExpandProperty Content
+Invoke-WebRequest "http://localhost:8080/api/patients/2345020285/medication-schedule/due-today" | Select-Object -ExpandProperty Content
+```
+Expect: Anna Gruber shows one entry, `"status":"PENDING"` (the seeded history only covers 3 earlier days, not today). Max Bauer shows **two** entries (`08:00:00` and `20:00:00`), both `PENDING` — confirms the twice-daily case works.
+
+Confirm today's dose — use the `scheduleTimeId` from Anna Gruber's due-today response above (`1` on a freshly migrated database):
+```powershell
+$body = @{ status = "TAKEN" } | ConvertTo-Json
+$response = Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/medication-schedule/1/intake" -Method POST -Body $body -ContentType "application/json"
+Write-Output "STATUS=$($response.StatusCode)"
+Write-Output $response.Content
+```
+Expect: `STATUS=200`, body shows `"status":"TAKEN"` with a real `confirmedAt`.
+
+Prove it's an upsert, not a duplicate (change your mind — same slot, same day):
+```powershell
+$body = @{ status = "SKIPPED" } | ConvertTo-Json
+Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/medication-schedule/1/intake" -Method POST -Body $body -ContentType "application/json" | Select-Object -ExpandProperty Content
+Invoke-WebRequest "http://localhost:8080/api/patients/1234010190/medication-schedule/due-today" | Select-Object -ExpandProperty Content
+```
+Expect: both show `"status":"SKIPPED"` — the same entry updated in place, not a second one.
+
+Create a new schedule (Paul Wagner, drug id 2 = Nurofen), note the generated id, then deactivate it:
+```powershell
+$body = @{ drugId = 2; doseText = "1 Tablette"; startDate = "2026-07-28"; endDate = $null; times = @("12:00:00") } | ConvertTo-Json
+$response = Invoke-WebRequest -Uri "http://localhost:8080/api/patients/4567040475/medication-schedule" -Method POST -Body $body -ContentType "application/json"
+Write-Output "STATUS=$($response.StatusCode)"
+Write-Output $response.Content
+```
+Expect: `STATUS=200`, a new schedule with a generated `id` in the body — read it from the output before the next step.
+
+```powershell
+$scheduleId = 4   # set this to the id the previous response actually returned, not a placeholder
+$response = Invoke-WebRequest -Uri "http://localhost:8080/api/patients/4567040475/medication-schedule/$scheduleId" -Method DELETE
+Write-Output "STATUS=$($response.StatusCode)"
+Invoke-WebRequest "http://localhost:8080/api/patients/4567040475/medication-schedule" | Select-Object -ExpandProperty Content
+Invoke-WebRequest "http://localhost:8080/api/patients/4567040475/medication-schedule/due-today" | Select-Object -ExpandProperty Content
+```
+Expect: `STATUS=204`; the schedule list still shows it, now `"active":false` (soft-stop, not a delete — same pattern as `ReservationService.cancelReservation`); due-today no longer includes it.
+
+Error cases:
+```powershell
+try { Invoke-WebRequest "http://localhost:8080/api/patients/0000000000/medication-schedule" } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
+$body = @{ status = "NOT_A_REAL_STATUS" } | ConvertTo-Json
+try { Invoke-WebRequest -Uri "http://localhost:8080/api/patients/1234010190/medication-schedule/1/intake" -Method POST -Body $body -ContentType "application/json" } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
+```
+Expect: `STATUS=404` for the unknown patient, `STATUS=400` for the invalid status string.
+
+Look at the seeded intake history directly:
+```powershell
+$env:PGPASSWORD = "medtrack"
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -h localhost -p 5434 -U medtrack -d medtrack -c "SELECT scheduled_date, status, confirmed_at FROM medication_intake_log ORDER BY scheduled_date;"
+```
+Expect: the 3 seeded rows (07-25 TAKEN, 07-26 SKIPPED, 07-27 TAKEN) plus whatever you confirmed above for today.
 
 ## 5. Project structure
 
@@ -249,6 +315,11 @@ This is just Maven's own summary line — the real cause is a Spring Boot except
 2. **A Flyway migration is actually broken** (bad SQL, a bad column reference, etc.) — fails during context startup, also within a couple seconds.
 
 The fastest way to tell them apart: run `& $mvn test` instead. It uses Testcontainers, which always picks a random free port, so it's immune to cause #1 — if `mvn test` also fails, the problem is a genuine bug in the code/migrations, not a local port collision, and the real Postgres error (Flyway prints the failing SQL, the exact error, and the line number) will be in that output instead of buried under a generic Maven summary.
+
+**A `$response = Invoke-WebRequest ...` command in one of the verification sections above "succeeds" with a status code that doesn't match what you expected**
+Two easy mistakes cause this, both worth checking before assuming the API is wrong:
+1. **A placeholder in the URL was never replaced with a real value.** `<` and `>` aren't valid URL characters, so a literal `.../medication-schedule/<scheduleId>` fails immediately — but since the failure happens *before* `$response` gets reassigned, `$response` still holds whatever it held from the last successful call. Checking `$response.StatusCode` afterward then silently shows that old, unrelated result instead of an error. Always substitute the actual id/value from a previous response's body, not a bracketed placeholder — the verification sections above use a `$scheduleId = 4  # set this to the id...` pattern specifically to make this harder to miss.
+2. **`Select-Object -ExpandProperty Content` only prints the response body, never the status code.** If a command in this doc doesn't split into `$response = ...` first, the *absence* of a thrown error is your proof of success (2xx), not any visible "200" text — `Invoke-WebRequest` throws on any non-2xx response. If you want the code printed explicitly, assign the response to a variable first and print `$response.StatusCode` separately, as most snippets in §4.5 do.
 
 **`docker compose up` fails, or containers won't start**
 Check Docker Desktop is actually running:

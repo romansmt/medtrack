@@ -192,4 +192,4 @@ Update README/TASKS/PROGRESS; add a short doc mapping ApoScout/ApoApp features �
 
 ---
 
-Status: TASK-12–24 done (see PROGRESS.md for the detailed writeup); TASK-25 onward not started. Phase 2A-2C (backend: pharmacy locator, availability, pricing/comparison, favorites/reservations) complete.
+Status: TASK-12–25 done (see PROGRESS.md for the detailed writeup); TASK-26 onward not started. All backend phases (2A-2D) complete. Remaining work is the frontend (Phase 2E) and docs polish (Phase 2F).

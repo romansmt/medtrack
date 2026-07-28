@@ -197,3 +197,12 @@ Done — 17/17 tests pass, `BUILD SUCCESS`; also closes a pre-existing gap where
 
 * `GET /api/drugs/{id}/compare?lat=&lng=&radiusKm=` on the existing `DrugController` (default radius `5.0`, matching `PharmacyController`/`AvailabilityController`), returning `List<PriceComparisonEntry>` (`pharmacy`, `price`, `inStock`) — no new controller needed.
 * `DrugControllerIntegrationTest.java` (new — `api`, test source, Testcontainers pattern): compares Aspirin (drug id 1, OTC, stocked by all 8 seeded pharmacies) across a 10km radius from central Vienna. Asserts the cheapest (`VitaNova-Apotheke`, `4.30`) and priciest (`Apotheke Zur Alten Muehle`, `4.75`) entries by name and exact price against the real `V5` seed values, plus a full ascending-order sweep across all 8 results — not just spot-checking the ends. A second test confirms an unknown drug id returns 404.
+
+## TASK-22 · `FavoritePharmacy`/`FavoriteDrug`/`Reservation` entities + migration
+
+Done — `mvn test`: `V6` applies cleanly, Hibernate schema validation passes, all 17 existing tests still pass, `BUILD SUCCESS`.
+
+* `FavoritePharmacy` (patient + pharmacy + `createdAt`) and `FavoriteDrug` (patient + drug + `createdAt`) — simple join entities, each with a `UNIQUE(patient_id, *_id)` constraint so a patient can't favorite the same pharmacy/drug twice. No seed data — unlike the pharmacy/drug catalog (which has to exist for search/availability to work at all), favorites are inherently patient-generated, so starting empty and creating them through the UI is more representative than faking some in.
+* `Reservation` (patient + pharmacy + drug + quantity + `status` + `requestedAt`), with a small `ReservationStatus` enum (`REQUESTED`, `CANCELLED`) — enough states for TASK-23's `ReservationService` to support both "make a reservation" and "cancel it" without modeling a full fulfillment workflow (no pharmacy-side confirm/reject step - out of scope, matches the "simple reservation feature, no real fulfillment loop" plan decision).
+* `V6__favorites_and_reservations_schema.sql` — three tables, named `pk_`/`fk_`/`uq_` constraints as usual, indexes on each table's `patient_id` (the expected lookup path: "my favorites", "my reservations").
+* **Numbering note:** originally planned as `V8` (with `V6`/`V7` reserved for the medication-schedule tables), but since Phase 2C is being built before Phase 2D, `V6` was the actual next free version — same situation as the `V3`–`V5` reordering back in TASK-13, resolved the same way (use the real next number, note it here rather than leaving a gap).

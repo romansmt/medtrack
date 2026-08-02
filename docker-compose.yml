@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: medtrack-postgres
+    environment:
+      POSTGRES_DB: medtrack
+      POSTGRES_USER: medtrack
+      POSTGRES_PASSWORD: medtrack
+    ports:
+      - "5434:5432"
+    volumes:
+      - medtrack-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medtrack -d medtrack"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  medtrack-postgres-data:

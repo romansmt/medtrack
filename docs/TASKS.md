@@ -192,4 +192,4 @@ Update README/TASKS/PROGRESS; add a short doc mapping ApoScout/ApoApp features �
 
 ---
 
-Status: TASK-12–26 done (see PROGRESS.md for the detailed writeup); TASK-27 onward not started. All backend phases (2A-2D) complete. Remaining work is the rest of the frontend (Phase 2E) and docs polish (Phase 2F).
+Status: TASK-12–27 done (see PROGRESS.md for the detailed writeup); TASK-28 onward not started. All backend phases (2A-2D) complete. Remaining work is the rest of the frontend (Phase 2E) and docs polish (Phase 2F).

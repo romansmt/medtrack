@@ -1,7 +1,9 @@
+import type { IconName } from "./Icon";
+
 export interface NavItem {
   to: string;
   label: string;
-  icon: "home" | "search" | "pill" | "store" | "heart" | "bookmark" | "doc" | "more";
+  icon: IconName;
 }
 
 export const primaryNavItems: NavItem[] = [

@@ -1,9 +1,17 @@
 import { Route, Routes } from "react-router-dom";
 import { AppShell } from "./layout/AppShell";
+import { useConsent } from "./hooks/useConsent";
+import { ConsentPage } from "./pages/ConsentPage";
 import { HomePage } from "./pages/HomePage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 
 export function App() {
+  const { hasConsented, giveConsent } = useConsent();
+
+  if (!hasConsented) {
+    return <ConsentPage onAccept={giveConsent} />;
+  }
+
   return (
     <Routes>
       <Route element={<AppShell />}>

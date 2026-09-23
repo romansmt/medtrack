@@ -1,0 +1,14 @@
+:root {
+  --color-bg: #f7f5ee;
+  --color-surface: #ffffff;
+  --color-primary: #d9432c;
+  --color-primary-contrast: #ffffff;
+  --color-text: #1c1c1c;
+  --color-text-muted: #6b6b6b;
+  --color-border: #e3e0d6;
+  --radius-card: 16px;
+  --radius-pill: 999px;
+  --shell-max-width: 960px;
+  --bottom-nav-height: 64px;
+  --header-height: 56px;
+}

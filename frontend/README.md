@@ -23,9 +23,17 @@ frontend/
 │   ├── api/            # One file per backend resource. Each exports a `use*Query`/`use*Mutation`
 │   │                    hook (TanStack Query) that wraps a plain fetch from client.ts.
 │   │   ├── client.ts    # Shared fetch wrapper (apiGet/apiSend) + ApiError.
-│   │   └── patients.ts
+│   │   ├── patients.ts
+│   │   └── pharmacies.ts
+│   ├── components/      # Reusable UI shared across pages, but not layout/nav (that's `layout/`)
+│   │   │                and not a route's own top-level content (that's `pages/`).
+│   │   ├── LocationPicker.tsx     # Sets UserLocationContext via the geocode endpoint.
+│   │   ├── NextOpenPharmacyCard.tsx
+│   │   ├── QuickLinkTile.tsx
+│   │   └── SearchBar.tsx
 │   ├── context/         # React context providers that need to be available app-wide.
-│   │   └── PatientContext.tsx   # Demo patient selector (no auth) — see TASKS.md TASK-26.
+│   │   ├── PatientContext.tsx       # Demo patient selector (no auth) — see TASKS.md TASK-26.
+│   │   └── UserLocationContext.tsx  # The user's chosen address/coordinates (TASK-28+).
 │   ├── layout/          # App shell: header, responsive nav, icons. Not page content.
 │   │   ├── AppShell.tsx
 │   │   ├── AppShell.css
@@ -35,7 +43,8 @@ frontend/
 │   ├── pages/           # One component per route, wired up in App.tsx. This is where each
 │   │                    TASK-27+ feature's actual UI lives.
 │   ├── App.tsx           # Route table.
-│   ├── main.tsx          # Provider composition (QueryClient, BrowserRouter, PatientProvider).
+│   ├── main.tsx          # Provider composition (QueryClient, BrowserRouter, PatientProvider,
+│   │                      UserLocationProvider).
 │   ├── theme.css          # CSS custom properties (design tokens) — see below.
 │   └── index.css
 ├── .env.development      # Committed, no secrets: dev-time VITE_API_BASE_URL default.
@@ -46,8 +55,9 @@ frontend/
 
 - **Pages are dumb containers.** A page component (`src/pages/*.tsx`) owns layout and composes hooks/components; it doesn't itself define fetch logic — that goes in `src/api/*.ts`.
 - **One `api/*.ts` file per backend resource** (matching the backend's controller boundaries, e.g. `patients.ts` ↔ `PatientController`), each exporting typed TanStack Query hooks, never a raw fetch call from inside a component.
-- **Context is for cross-cutting app state only** (currently just the selected demo patient). Don't reach for context for state that's local to one page.
+- **Context is for cross-cutting app state only** (currently the selected demo patient and the user's chosen location). Don't reach for context for state that's local to one page.
 - All demo-patient-scoped API calls need the currently selected patient's `svnr` from `usePatient()` (`src/context/PatientContext.tsx`) — there is no auth/session, the patient selector in the header is the entire "login."
+- The user's chosen address/coordinates (for nearby-pharmacy features) live in `useUserLocation()` (`src/context/UserLocationContext.tsx`), deliberately **not** named `useLocation` - that name is already `react-router-dom`'s hook for the current URL, and shadowing it would be a confusing landmine for anyone reaching for router state.
 
 ## Allowed icon tags
 
@@ -68,6 +78,7 @@ Defined once in [`theme.css`](src/theme.css), consumed via `var(--token-name)` e
 | `--color-text` | `#1c1c1c` | Default body text |
 | `--color-text-muted` | `#6b6b6b` | Secondary/help text |
 | `--color-border` | `#e3e0d6` | Hairline borders/dividers |
+| `--color-success` | `#2f9e5c` | "Open now" / positive-status text |
 | `--radius-card` | `16px` | Cards, sheets, panels |
 | `--radius-pill` | `999px` | Buttons, the patient selector, chips |
 | `--shell-max-width` | `960px` | Max content width on wide screens |

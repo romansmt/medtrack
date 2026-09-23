@@ -1,0 +1,54 @@
+.location-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.location-picker__label {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.location-picker__change,
+.location-picker__cancel {
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.location-picker--form input {
+  flex: 1;
+  min-width: 200px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 8px 14px;
+  background: var(--color-surface);
+}
+
+.location-picker--form button[type="submit"] {
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.location-picker--form button[type="submit"]:disabled {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.location-picker__error {
+  width: 100%;
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+}

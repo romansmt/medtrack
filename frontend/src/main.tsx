@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import "./index.css";
 import { App } from "./App";
 import { PatientProvider } from "./context/PatientContext";
+import { UserLocationProvider } from "./context/UserLocationContext";
 
 const queryClient = new QueryClient();
 
@@ -14,7 +15,9 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <PatientProvider>
-          <App />
+          <UserLocationProvider>
+            <App />
+          </UserLocationProvider>
         </PatientProvider>
       </BrowserRouter>
     </QueryClientProvider>

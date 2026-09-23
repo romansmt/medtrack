@@ -269,3 +269,21 @@ Done — `npm run build` succeeds, verified live in-browser at both desktop and 
 * Responsive per the task's explicit "Desktop layout" callout: a centered card (max-width 420px, growing to 460px at 768px+) over the shared `--color-bg` background, not the reference screenshots' edge-to-edge phone layout — verified at both 375px and desktop widths in-browser, including stepping through all four slides, the skip shortcut, and the disabled-until-checked CTA.
 
 Not started: TASK-28 onward.
+
+## TASK-28 · Home dashboard
+
+Done — `npm run build` succeeds, verified live end-to-end against the real backend (search bar navigation, geocode → nearby-pharmacy flow, both desktop and 375px mobile).
+
+* `src/api/pharmacies.ts` — `useNearbyPharmaciesQuery(lat, lng)` (`GET /api/pharmacies/nearby`, `enabled` gated on both coordinates being present) and `useGeocodeMutation()` (`GET /api/pharmacies/geocode`, a mutation rather than a query since it's a one-shot user-triggered lookup, not cached/refetched data).
+* `src/context/UserLocationContext.tsx` — new app-wide context for the address/coordinates the user sets (`medtrack.userLocation` in `localStorage`, same persistence pattern as `PatientContext`/`useConsent`). Deliberately named `useUserLocation`, not `useLocation` — that name already belongs to `react-router-dom`'s current-URL hook, and shadowing it would be a landmine for the next person who imports both. Wired into `main.tsx` alongside `PatientProvider`.
+* New `src/components/` folder (added to `frontend/README.md`'s structure section) for UI reused across pages that isn't layout/nav and isn't a whole route's content:
+  - `SearchBar.tsx` - controlled input; on submit, `navigate`s to `/search?q=<value>` rather than searching itself. The actual search logic is TASK-29's job; this just proves the entry point works and hands the query along via the URL.
+  - `LocationPicker.tsx` - address input + "Standort festlegen" button, calls the geocode mutation and writes the result into `UserLocationContext`; once a location is set, collapses to a one-line "Standort: {label} · Ändern" so it doesn't dominate the page on repeat visits.
+  - `NextOpenPharmacyCard.tsx` - reads `useUserLocation()`; with no location set, shows a prompt instead of guessing one (no default coordinates, no silent browser-geolocation fallback - TASK-15's geocode adapter is the only location source, matching the reference app's own "Standort festlegen" pattern). With a location, queries `/nearby` and picks the first result with `openNow === true` (the endpoint sorts by distance, not by open status, so this has to filter client-side).
+  - `QuickLinkTile.tsx` - small `Link`-wrapped card (icon + label), reused 4 times for the quick-link grid.
+* `src/pages/HomePage.tsx` rebuilt from the TASK-26 placeholder into the real dashboard: hero copy, `SearchBar`, `LocationPicker`, a 4-tile quick-link grid (`Geöffnete Apotheken in der Nähe` → `/pharmacies`, `Verfügbarkeit von Medikamenten` → `/search`, `Mein Einnahmeplan` → `/medication-plan`, `Meine Lieblingsapotheken` → `/favorites`), then `NextOpenPharmacyCard`. All four quick-link tiles reuse existing `IconName`s (`store`/`search`/`pill`/`heart`) - no new icon tags needed for this task.
+* Pollen widget (the DoD's explicit stretch item) was skipped - there's no backend data source for it and MedTrack's scope doesn't include a pollen feature anywhere in TASKS.md/architecture doc, so faking one would be pure decoration with no real data behind it.
+* One new design token, `--color-success` (`#2f9e5c`), added to `theme.css` for the "geöffnet" status text on the next-open-pharmacy card, rather than hardcoding the green - README's token table updated to match.
+* Verified against the real running backend end-to-end, not just `npm run build`: geocoded `Freyung 7, Wien` via the live Nominatim-backed endpoint, confirmed the nearby-pharmacy query returned and rendered the correct nearest open pharmacy (`Apotheke Zum Goldenen Loewen`, matching a direct `curl` of the same endpoint), confirmed `localStorage` persistence of the chosen location, and confirmed the search bar's `Return`-to-navigate flow lands on `/search?q=...` with the typed value intact.
+
+Not started: TASK-29 onward.

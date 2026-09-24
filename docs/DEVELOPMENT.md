@@ -339,6 +339,51 @@ $env:PGPASSWORD = "medtrack"
 ```
 Expect: the 3 seeded rows (07-25 TAKEN, 07-26 SKIPPED, 07-27 TAKEN) plus whatever you confirmed above for today.
 
+### 4.8 Verifying the registration flow (Phase 2G — mock ID Austria + e-card)
+
+Unlike 4.4–4.7, this feature has a real frontend UI (`RegistrationPage` at `frontend/`, see `frontend/README.md`) built around it, not just a REST API — the table below is primarily for driving that UI by hand, with the equivalent raw API calls underneath for backend-only checks.
+
+**Demo login/e-card data for all four seeded patients.** Every field a real e-card would carry back, precomputed from what's already in `V2__seed_demo_data.sql` so nothing here needs the app running to look up — use these to log in via "Mit ID Austria anmelden (Demo)" and to fill in (or cross-check) the e-card scan/confirm screen:
+
+| Patient | SVNR | Vorname | Nachname | Geburtsdatum | Kennnummer der Karte | Kennnummer des Trägers | Versicherung | Ablaufdatum |
+|---|---|---|---|---|---|---|---|---|
+| Anna Gruber | `1234010190` | Anna | Gruber | 01/01/1990 | `12340101900910104321` | `4711` | ÖGK | 31/12/2031 |
+| Max Bauer | `2345020285` | Max | Bauer | 02/02/1985 | `23450202855820205432` | `4711` | ÖGK | 31/12/2031 |
+| Lena Hofer | `3456030380` | Lena | Hofer | 03/03/1980 | `34560303800830306543` | `4711` | ÖGK | 31/12/2031 |
+| Paul Wagner | `4567040475` | Paul | Wagner | 04/04/1975 | `45670404755740407654` | `4711` | ÖGK | 31/12/2031 |
+
+Where each column comes from (all in `MockEHealthCardAdapter.java` — nothing here is stored anywhere, it's all computed on request):
+- **SVNR** is the real seeded value. Its own last 6 digits *are* the Geburtsdatum column, encoded `ddMMyy` (Austria's real SVNR format) — e.g. Anna's `1234010190` → `010190` → 01/01/1990. This is exactly the pair the registration flow's consistency check compares against what you typed at login.
+- **Kennnummer der Karte** = the SVNR followed by its own reverse (`svnr + reverse(svnr)`), always 20 digits, deterministic per patient — not a real card-number scheme.
+- **Kennnummer des Trägers** and **Versicherung** are fixed for every patient - this demo only models one insurer.
+- **Ablaufdatum** is *not* fixed - it's computed live as `today + 5 years, forced to 31 December`, so it moves forward every year. The value above is only correct as of when this doc was last touched; if it looks off, recompute it or just trust whatever the app/`scan-card` response shows and copy that instead.
+
+Golden path — log in as Anna Gruber, scan/confirm, land in the app as her:
+1. On `RegistrationPage`, enter Vorname `Anna`, Nachname `Gruber`, Geburtsdatum `01/01/1990`, submit.
+2. On the e-card step, either pick any image file (content is never inspected) or use "Kein Foto zur Hand? Werte stattdessen manuell eingeben" and type the rest of Anna's row above into the confirm form.
+3. Confirm. Expect: lands on the Home dashboard, header shows "Anna Gruber", no "not linked" banner.
+
+Deliberate error case - same table proves the mismatch check works:
+1. Log in with Vorname `Anna`, Nachname `Gruber`, but Geburtsdatum `02/02/1985` (Max's birthdate, not Anna's).
+2. Scan/enter Anna's e-card data (her real SVNR `1234010190`) as normal.
+3. Confirm. Expect: rejected with *"Das in der SVNR enthaltene Geburtsdatum stimmt nicht mit dem bei der ID-Austria-Anmeldung angegebenen Geburtsdatum überein."* - not silently accepted.
+
+Raw API equivalents, if you want to check the backend alone without the UI:
+```powershell
+$body = @{ fullName = "Anna Gruber"; dateOfBirth = "1990-01-01" } | ConvertTo-Json
+Invoke-WebRequest -Uri "http://localhost:8080/api/registration/id-austria-login" -Method POST -Body $body -ContentType "application/json" | Select-Object -ExpandProperty Content
+```
+Expect: `200`, echoes back the same name/birthdate plus a fresh `authenticatedAt` - this step always succeeds, it's a mock with nothing to reject against.
+
+```powershell
+$body = @{ fullName = "Anna Gruber" } | ConvertTo-Json
+Invoke-WebRequest -Uri "http://localhost:8080/api/registration/scan-card" -Method POST -Body $body -ContentType "application/json" | Select-Object -ExpandProperty Content
+
+$body = @{ fullName = "Nobody Here" } | ConvertTo-Json
+try { Invoke-WebRequest -Uri "http://localhost:8080/api/registration/scan-card" -Method POST -Body $body -ContentType "application/json" } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
+```
+Expect: the first call returns Anna's full row from the table above as JSON; the second returns `STATUS=404` - only the four seeded names have a card to "scan."
+
 ## 5. Project structure
 
 ```

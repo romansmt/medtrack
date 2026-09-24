@@ -197,7 +197,7 @@ Update README/TASKS/PROGRESS; add a short doc mapping ApoScout/ApoApp features �
 The architecture doc always named a `MockIdAustriaAuthAdapter` as part of the target design (see `docs/PROGRESS.md`'s TASK-01 note), but the actual build never implemented it - the demo patient selector stood in for login instead. This phase adds the real thing, as a one-time registration step rather than a per-session gate.
 
 TASK-36 · Mock ID Austria login + e-card scan registration flow
-A one-time (not per-session) registration flow: mock ID Austria login (asserts a name + birthdate) → simulated e-card photo scan (returns SVNR, name, birthdate, 20-digit card serial, 4-digit carrier number, carrier name, expiry) → an editable confirm screen that validates the SVNR's embedded birthdate against the ID-Austria-asserted one before establishing the active patient. Runs once, remembered via `localStorage` exactly like the consent screen; the existing patient-selector dropdown is untouched and still works for quick demo-patient switching afterward.
+A one-time (not per-session) registration flow: mock ID Austria login (asserts a name + birthdate) → simulated e-card photo scan (returns SVNR, name, birthdate, 20-digit card serial, 4-digit carrier number, carrier name, expiry) → an editable confirm screen that validates the SVNR's embedded birthdate against the ID-Austria-asserted one before establishing the active patient. Runs once, remembered via `localStorage` exactly like the consent screen; the existing patient-selector dropdown is untouched and still works for quick demo-patient switching afterward. A persistent "Ohne Anmeldung fortfahren" control lets anyone skip the whole flow at any stage, for users who don't want to link their data at all.
 
 ---
 

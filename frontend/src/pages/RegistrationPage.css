@@ -20,11 +20,38 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
+.registration-topbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .registration-logo {
-  align-self: flex-start;
   font-weight: 700;
   font-size: 1.2rem;
   color: var(--color-primary);
+}
+
+.registration-skip {
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.registration-skip-hint {
+  width: 100%;
+  margin: -8px 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: left;
+  line-height: 1.4;
 }
 
 .registration-dots {

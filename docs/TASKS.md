@@ -192,4 +192,13 @@ Update README/TASKS/PROGRESS; add a short doc mapping ApoScout/ApoApp features �
 
 ---
 
-Status: TASK-00–35 all done (see PROGRESS.md for the detailed per-task writeup, and FEATURE_MAPPING.md for the ApoScout/ApoApp → MedTrack feature table added by TASK-35). All backend phases (2A-2D) and the full frontend (Phase 2E) are complete; every nav route is wired to the real backend, not a placeholder.
+### Phase 2G — Identity & e-card registration (added post-TASK-35)
+
+The architecture doc always named a `MockIdAustriaAuthAdapter` as part of the target design (see `docs/PROGRESS.md`'s TASK-01 note), but the actual build never implemented it - the demo patient selector stood in for login instead. This phase adds the real thing, as a one-time registration step rather than a per-session gate.
+
+TASK-36 · Mock ID Austria login + e-card scan registration flow
+A one-time (not per-session) registration flow: mock ID Austria login (asserts a name + birthdate) → simulated e-card photo scan (returns SVNR, name, birthdate, 20-digit card serial, 4-digit carrier number, carrier name, expiry) → an editable confirm screen that validates the SVNR's embedded birthdate against the ID-Austria-asserted one before establishing the active patient. Runs once, remembered via `localStorage` exactly like the consent screen; the existing patient-selector dropdown is untouched and still works for quick demo-patient switching afterward.
+
+---
+
+Status: TASK-00–36 all done (see PROGRESS.md for the detailed per-task writeup, and FEATURE_MAPPING.md for the ApoScout/ApoApp → MedTrack feature table added by TASK-35). All backend phases (2A-2D), the full frontend (Phase 2E), and the ID Austria/e-card registration flow (Phase 2G) are complete.

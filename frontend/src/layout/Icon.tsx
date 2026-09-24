@@ -7,7 +7,8 @@ export type IconName =
   | "bookmark"
   | "doc"
   | "more"
-  | "shield";
+  | "shield"
+  | "camera";
 
 const paths: Record<IconName, string> = {
   home: "M3 11.5 12 4l9 7.5M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9",
@@ -19,6 +20,7 @@ const paths: Record<IconName, string> = {
   doc: "M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5M9 13h6M9 17h6",
   more: "M5 12h.01M12 12h.01M19 12h.01",
   shield: "M12 3 4 6v6c0 5 3.5 8.5 8 9 4.5-.5 8-4 8-9V6l-8-3Zm-2.5 9 2 2 4-4.5",
+  camera: "M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Zm8 9a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
 };
 
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {

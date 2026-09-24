@@ -15,7 +15,8 @@ MedTrack's Phase 2 ("ApoScout + ApoApp feature build", see [TASKS.md](TASKS.md))
 | Mein Einnahmeplan (medication plan / adherence tracking) | `application.service.MedicationScheduleService` | [`/medication-plan`](../frontend/src/pages/MedicationPlanPage.tsx) |
 | Meine Rezepte (ÖGK prescriptions) | `application.service.PrescriptionService` (the original vertical slice, TASK-05–09) | [`/prescriptions`](../frontend/src/pages/PrescriptionsPage.tsx) |
 | Sicherheit/Datenschutz-Einstieg (security/consent onboarding) | *(none - frontend-only, no data is actually collected)* | [`ConsentPage`](../frontend/src/pages/ConsentPage.tsx) |
-| Demo-Patientenauswahl (stands in for real login) | `application.service.PatientService` → `GET /api/patients` | [`PatientSelector`](../frontend/src/layout/PatientSelector.tsx) + [`PatientContext`](../frontend/src/context/PatientContext.tsx) |
+| Anmeldung mit ID Austria + e-card-Scan (one-time registration, links a login to an SVNR) | `application.service.RegistrationService`, `IdAustriaAuthPort`/`MockIdAustriaAuthAdapter`, `EHealthCardPort.scanCard`/`MockEHealthCardAdapter` → `POST /api/registration/id-austria-login`, `POST /api/registration/scan-card` | [`RegistrationPage`](../frontend/src/pages/RegistrationPage.tsx) and its three steps under `frontend/src/pages/registration/` |
+| Demo-Patientenauswahl (quick-switch between demo patients after registration) | `application.service.PatientService` → `GET /api/patients` | [`PatientSelector`](../frontend/src/layout/PatientSelector.tsx) + [`PatientContext`](../frontend/src/context/PatientContext.tsx) |
 
 ## Deliberately not implemented
 
@@ -23,7 +24,7 @@ These appear in the reference apps' screenshots but were intentionally left out 
 
 - **Pollenflug (pollen forecast widget).** TASK-28's own DoD lists it as an explicit stretch goal. There is no backend data source or service for it anywhere in the architecture doc or `TASKS.md`, so building it would mean fabricating fake pollen numbers with nothing behind them - pure decoration, not a real feature. Skipped; see `docs/PROGRESS.md`'s TASK-28 entry.
 - **Gesundheitsnachrichten (health news article feed).** Shown in the ApoApp reference screenshots' home screen but never appears in `TASKS.md`, the architecture doc's service list, or any backend controller. Out of scope entirely, not a cut corner.
-- **Real ID Austria / e-card login.** Explicitly out of scope for the whole project (see `docs/DEVELOPMENT.md` / the architecture doc) - the demo patient selector stands in for it everywhere.
+- **Überweisungen (referrals).** The architecture doc's full target domain model lists `Referral`/`DoctorMatchService`, and TASK-36's e-card framing mentions referrals conceptually, but no `Referral` entity, migration, service, or endpoint exists - only `Prescription` was ever built (the original ÖGK slice). Building referrals would be a substantial new feature (new domain entity + migration + service + controller + frontend page), not something TASK-36's "add a login" scope covered. Deferred, tracked here so it isn't mistaken for an oversight.
 
 ## How to use this table when something breaks
 

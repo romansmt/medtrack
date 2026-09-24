@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface PatientRepository extends JpaRepository<Patient, Long> {
 
     Optional<Patient> findBySvnr(String svnr);
+
+    Optional<Patient> findByNameIgnoreCase(String name);
 }

@@ -33,6 +33,7 @@ frontend/
 │   │   ├── patients.ts      <-> PatientController
 │   │   ├── pharmacies.ts    <-> PharmacyController
 │   │   ├── prescriptions.ts <-> PrescriptionController
+│   │   ├── registration.ts  <-> RegistrationController
 │   │   └── reservations.ts  <-> ReservationController
 │   ├── components/          Reusable UI shared across pages - not layout/nav (that's layout/)
 │   │   │                    and not a whole route's own content (that's pages/).
@@ -51,20 +52,27 @@ frontend/
 │   │   └── UserLocationContext.tsx   The user's chosen address/coordinates (TASK-28+).
 │   │                                 Named useUserLocation, NOT useLocation - see Conventions.
 │   ├── hooks/
-│   │   └── useConsent.ts     localStorage-backed onboarding-seen flag. Not a context - only
-│   │                         App.tsx reads/writes it.
+│   │   ├── useConsent.ts      localStorage-backed onboarding-seen flag. Not a context - only
+│   │   │                      App.tsx reads/writes it.
+│   │   └── useRegistration.ts localStorage-backed "has registered" flag - same shape as
+│   │                          useConsent. Also only read/written by App.tsx.
 │   ├── layout/                App shell: header, responsive nav, icons. Not page content.
 │   │   ├── AppShell.tsx / .css
 │   │   ├── Icon.tsx           The IconName union lives here - see "Allowed icon tags" below.
 │   │   ├── navItems.ts        Single source of truth for nav routes/labels/icons.
 │   │   └── PatientSelector.tsx
 │   ├── pages/                  One component per route (wired up in App.tsx) - see "Routes" below.
-│   │   └── onboardingSlides.ts  Data (not a component) for ConsentPage's 4-slide carousel.
+│   │   ├── onboardingSlides.ts  Data (not a component) for ConsentPage's 4-slide carousel.
+│   │   └── registration/        The 3 steps of RegistrationPage's flow, one file each (unlike
+│   │                            MedicationPlanPage's single-file AddScheduleForm sub-component,
+│   │                            these have enough independent form state/API logic to earn
+│   │                            their own files): IdAustriaLoginStep.tsx, ECardScanStep.tsx,
+│   │                            ConfirmCardDataStep.tsx.
 │   ├── utils/
 │   │   └── format.ts          germanDayName/formatTime/formatDistance/formatPrice/formatDateTime/
 │   │                          formatDate. Backend LocalDate/LocalTime/Instant fields arrive as
 │   │                          plain ISO strings - these only slice/relabel them, no Date parsing.
-│   ├── App.tsx                 Route table + the consent gate.
+│   ├── App.tsx                 Route table + the consent gate + the one-time registration gate.
 │   ├── main.tsx                 Provider composition (QueryClient, BrowserRouter,
 │   │                            PatientProvider, UserLocationProvider).
 │   ├── theme.css                 CSS custom properties (design tokens) - see below.
@@ -86,7 +94,7 @@ frontend/
 | `/reservations` | `ReservationsPage` | TASK-33 |
 | `/prescriptions` | `PrescriptionsPage` | Wires up the original ÖGK slice's endpoint (TASK-34) |
 
-Before any route renders, `App.tsx` gates on `useConsent()` - see `ConsentPage`.
+Before any route renders, `App.tsx` gates on `useConsent()` (see `ConsentPage`), then on `useRegistration()` (see `RegistrationPage` - a one-time mock ID Austria login + e-card scan that establishes which patient you are; not a route itself, and not shown again once completed).
 
 ## Conventions
 
@@ -97,12 +105,14 @@ Before any route renders, `App.tsx` gates on `useConsent()` - see `ConsentPage`.
 - The user's chosen address/coordinates (for nearby-pharmacy features) live in `useUserLocation()` (`src/context/UserLocationContext.tsx`), deliberately **not** named `useLocation` - that name is already `react-router-dom`'s hook for the current URL, and shadowing it would be a confusing landmine for anyone reaching for router state.
 - **Backend `String`-typed status fields have no compiler safety net.** `ReservationResponse.status`, `PrescriptionResponse.status`, `DueMedicationResponse.status` etc. are plain Java `String`s wrapping an enum's `.name()`, not the enum itself - TypeScript can't check them against the real backend enum for you. Before hardcoding a status literal (e.g. `"OPEN"`), open the actual `domain.*Status` enum in the backend and copy its real values. Getting this wrong doesn't fail to compile or throw - it just silently filters everything out (see `docs/PROGRESS.md`'s TASK-29 "Bugs found and fixed" entry, where this happened once already with `ReservationStatus`).
 - **An expand/collapse `<button>` must never contain another interactive `<button>`.** Nested buttons are invalid HTML; browsers silently "recover" from it visually, so nothing looks wrong on screen, but React logs a hydration-error warning in the console and screen readers/keyboard nav break. `PharmacyCard` hit this once (its favorite-toggle button was nested inside the expand button) - see the same PROGRESS.md entry. If a card needs both a big "expand" click zone and a smaller "action" button inside its header, they must be siblings, not parent/child.
+- **Registration (once) vs. the patient dropdown (anytime) are deliberately separate concerns.** `RegistrationPage` establishes *which* patient you are, one time, by calling the same `selectPatient()` that the header's `PatientSelector` dropdown also calls. After registering, the dropdown still works exactly as before, for quickly previewing other demo patients - that's intentional (see `docs/PROGRESS.md`'s TASK-36 entry for why), not a leftover that should be locked down.
+- **The SVNR→birthdate decode (`ddMMyy` from the last 6 digits) is duplicated on purpose**, once in the backend (`MockEHealthCardAdapter.dateOfBirthFromSvnr`) and once in the frontend (`ConfirmCardDataStep.birthDateFromSvnr`), so the confirm form can validate instantly as the user edits the SVNR field, not just after a round trip. If this decoding logic ever changes (e.g. the century-inference heuristic), change it in both places.
 
 ## Allowed icon tags
 
 Icons are a closed set defined in [`Icon.tsx`](src/layout/Icon.tsx) as the `IconName` union (consumed by both `navItems.ts` and `onboardingSlides.ts`), each with one hand-drawn inline SVG path — there is no icon library dependency. **Do not reference an icon name that isn't in this list; extend `IconName` and the `paths` map in `Icon.tsx` before using a new one.**
 
-Currently allowed: `home`, `search`, `pill`, `store`, `heart`, `bookmark`, `doc`, `more`, `shield`.
+Currently allowed: `home`, `search`, `pill`, `store`, `heart`, `bookmark`, `doc`, `more`, `shield`, `camera`.
 
 ## Design tokens (CSS custom properties)
 
@@ -167,3 +177,6 @@ Real bug, not noise - see the nested-button convention above. `read_console_mess
 
 **IntelliJ (or `git status`) doesn't show recent changes.**
 This is an IDE cache/VCS-watcher issue, not a code issue - `File → Reload All from Disk`, or reopen the project if that doesn't help. Verify the actual state with `git log`/`git status` in a terminal first before assuming work was lost.
+
+**Stuck on the registration screen (`RegistrationPage`) and can't get into the app.**
+This is expected for any name that isn't one of the four seeded demo patients (Anna Gruber, Max Bauer, Lena Hofer, Paul Wagner) - the e-card scan step 404s on purpose, since only those four have a fake card to "scan." If a *known* demo name still fails at the confirm step, you likely typed a birthdate that doesn't match that patient's real seeded SVNR (the last 6 digits are their real `ddMMyy`) - see the TASK-36 entry in `docs/PROGRESS.md`. To redo registration from scratch during development, clear `localStorage['medtrack.registrationComplete']`.

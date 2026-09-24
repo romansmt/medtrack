@@ -345,18 +345,18 @@ Unlike 4.4–4.7, this feature has a real frontend UI (`RegistrationPage` at `fr
 
 **Demo login/e-card data for all four seeded patients.** Every field a real e-card would carry back, precomputed from what's already in `V2__seed_demo_data.sql` so nothing here needs the app running to look up — use these to log in via "Mit ID Austria anmelden (Demo)" and to fill in (or cross-check) the e-card scan/confirm screen:
 
-| Patient | SVNR | Vorname | Nachname | Geburtsdatum | Kennnummer der Karte | Kennnummer des Trägers | Versicherung | Ablaufdatum |
-|---|---|---|---|---|---|---|---|---|
-| Anna Gruber | `1234010190` | Anna | Gruber | 01/01/1990 | `12340101900910104321` | `4711` | ÖGK | 31/12/2031 |
-| Max Bauer | `2345020285` | Max | Bauer | 02/02/1985 | `23450202855820205432` | `4711` | ÖGK | 31/12/2031 |
-| Lena Hofer | `3456030380` | Lena | Hofer | 03/03/1980 | `34560303800830306543` | `4711` | ÖGK | 31/12/2031 |
-| Paul Wagner | `4567040475` | Paul | Wagner | 04/04/1975 | `45670404755740407654` | `4711` | ÖGK | 31/12/2031 |
+| Patient | MedTrack-ID | SVNR | Vorname | Nachname | Geburtsdatum | Kennnummer der Karte | Kennnummer des Trägers | Versicherung | Ablaufdatum |
+|---|---|---|---|---|---|---|---|---|---|
+| Anna Gruber | `MT-10000001` | `1234010190` | Anna | Gruber | 01/01/1990 | `12340101900910104321` | `4711` | ÖGK | 31/12/2031 |
+| Max Bauer | `MT-10000002` | `2345020285` | Max | Bauer | 02/02/1985 | `23450202855820205432` | `4711` | ÖGK | 31/12/2031 |
+| Lena Hofer | `MT-10000003` | `3456030380` | Lena | Hofer | 03/03/1980 | `34560303800830306543` | `4711` | ÖGK | 31/12/2031 |
+| Paul Wagner | `MT-10000004` | `4567040475` | Paul | Wagner | 04/04/1975 | `45670404755740407654` | `4711` | ÖGK | 31/12/2031 |
 
-Where each column comes from (all in `MockEHealthCardAdapter.java` — nothing here is stored anywhere, it's all computed on request):
+Where each column comes from:
+- **MedTrack-ID** is a real, persisted column (`patient.medtrack_id`, migration `V9__add_patient_medtrack_id.sql`, unique + not-null) - MedTrack's own account/customer number, deliberately distinct from the government-issued SVNR next to it (the same way a real insurer's "Kundennummer" differs from your SVNR). It's the one field in this table that's genuinely stored, not computed on request. `GET /api/patients` and the scan-card response both return it as `medtrackId`.
 - **SVNR** is the real seeded value. Its own last 6 digits *are* the Geburtsdatum column, encoded `ddMMyy` (Austria's real SVNR format) — e.g. Anna's `1234010190` → `010190` → 01/01/1990. This is exactly the pair the registration flow's consistency check compares against what you typed at login.
-- **Kennnummer der Karte** = the SVNR followed by its own reverse (`svnr + reverse(svnr)`), always 20 digits, deterministic per patient — not a real card-number scheme.
-- **Kennnummer des Trägers** and **Versicherung** are fixed for every patient - this demo only models one insurer.
-- **Ablaufdatum** is *not* fixed - it's computed live as `today + 5 years, forced to 31 December`, so it moves forward every year. The value above is only correct as of when this doc was last touched; if it looks off, recompute it or just trust whatever the app/`scan-card` response shows and copy that instead.
+- **Kennnummer der Karte**, **Kennnummer des Trägers**, **Versicherung**, **Ablaufdatum** are all computed on request in `MockEHealthCardAdapter.java`, not stored - see that file's comments for exactly how (card number = SVNR + its own reverse; carrier number/name fixed, this demo only models one insurer; expiry = `today + 5 years, forced to 31 December`, so it moves forward every year - the value above is only correct as of when this doc was last touched).
+- The registration flow shows MedTrack-ID as a read-only field alongside these; if you reach the confirm screen via "Werte manuell eingeben" (skipping the photo) rather than a scan, it shows *"(wird nach Bestätigung zugewiesen)"* instead, since it isn't resolved until the SVNR you type is confirmed - the real value then appears immediately on the Home page and in the header once you land in the app.
 
 Golden path — log in as Anna Gruber, scan/confirm, land in the app as her:
 1. On `RegistrationPage`, enter Vorname `Anna`, Nachname `Gruber`, Geburtsdatum `01/01/1990`, submit.
@@ -383,6 +383,11 @@ $body = @{ fullName = "Nobody Here" } | ConvertTo-Json
 try { Invoke-WebRequest -Uri "http://localhost:8080/api/registration/scan-card" -Method POST -Body $body -ContentType "application/json" } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
 ```
 Expect: the first call returns Anna's full row from the table above as JSON; the second returns `STATUS=404` - only the four seeded names have a card to "scan."
+
+```powershell
+Invoke-WebRequest "http://localhost:8080/api/patients" | Select-Object -ExpandProperty Content
+```
+Expect: all four patients, each with a `medtrackId` matching the table above - confirms it's a real stored column (migration `V9`), not something only the registration endpoints know about.
 
 ## 5. Project structure
 

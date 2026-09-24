@@ -55,6 +55,7 @@ export function RegistrationPage({ onComplete }: { onComplete: (linked: boolean)
               const [firstName, ...rest] = identity.fullName.split(" ");
               setCardDetails({
                 svnr: "",
+                medtrackId: "",
                 firstName: firstName ?? "",
                 lastName: rest.join(" "),
                 dateOfBirth: identity.dateOfBirth,

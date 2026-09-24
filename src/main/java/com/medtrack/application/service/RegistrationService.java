@@ -32,6 +32,7 @@ public class RegistrationService {
         ECardDetails details = eHealthCardPort.scanCard(fullName);
         return new ECardDetailsResponse(
                 details.svnr(),
+                details.medtrackId(),
                 details.firstName(),
                 details.lastName(),
                 details.dateOfBirth(),

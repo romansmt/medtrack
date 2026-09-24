@@ -4,6 +4,7 @@ import java.time.LocalDate;
 
 public record ECardDetails(
         String svnr,
+        String medtrackId,
         String firstName,
         String lastName,
         LocalDate dateOfBirth,

@@ -44,6 +44,7 @@ public class MockEHealthCardAdapter implements EHealthCardPort {
 
         return new ECardDetails(
                 svnr,
+                patient.getMedtrackId(),
                 firstName,
                 lastName,
                 dateOfBirthFromSvnr(svnr),

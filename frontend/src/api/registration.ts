@@ -9,6 +9,7 @@ export interface IdAustriaIdentity {
 
 export interface ECardDetails {
   svnr: string;
+  medtrackId: string;
   firstName: string;
   lastName: string;
   dateOfBirth: string;

@@ -5,6 +5,7 @@ export interface Patient {
   id: number;
   svnr: string;
   name: string;
+  medtrackId: string;
 }
 
 export function usePatientsQuery() {

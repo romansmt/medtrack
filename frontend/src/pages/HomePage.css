@@ -6,6 +6,16 @@
   margin: 0 auto;
 }
 
+.home-page__welcome {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.home-page__welcome strong {
+  color: var(--color-text);
+}
+
 .home-page__hero h1 {
   font-size: 1.5rem;
   margin: 0 0 8px;

@@ -23,7 +23,7 @@ class MockEHealthCardAdapterTest {
     @Test
     void lookupBySvnrReturnsSessionWhenPatientExists() {
         String svnr = "1234010190";
-        when(patientRepository.findBySvnr(svnr)).thenReturn(Optional.of(new Patient(svnr, "Anna Gruber")));
+        when(patientRepository.findBySvnr(svnr)).thenReturn(Optional.of(new Patient(svnr, "Anna Gruber", "MT-00000000")));
 
         MockEHealthCardAdapter adapter = new MockEHealthCardAdapter(patientRepository);
 

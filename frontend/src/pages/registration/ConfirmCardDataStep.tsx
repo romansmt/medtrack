@@ -67,6 +67,14 @@ export function ConfirmCardDataStep({
       </p>
 
       <label>
+        MedTrack-ID
+        <input
+          type="text"
+          value={details.medtrackId || "(wird nach Bestätigung zugewiesen)"}
+          readOnly
+        />
+      </label>
+      <label>
         SVNR
         <input type="text" value={svnr} onChange={(e) => setSvnr(e.target.value)} maxLength={10} required />
       </label>

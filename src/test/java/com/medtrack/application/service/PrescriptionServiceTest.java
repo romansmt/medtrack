@@ -37,7 +37,7 @@ class PrescriptionServiceTest {
     @Test
     void getPrescriptionsForPatientMapsToDto() {
         String svnr = "1234010190";
-        Patient patient = new Patient(svnr, "Anna Gruber");
+        Patient patient = new Patient(svnr, "Anna Gruber", "MT-00000000");
         Doctor doctor = new Doctor("Dr. Julia Steiner", "General Practitioner");
         Drug drug = new Drug("Aspirin", "Acetylsalicylic acid", "Tabletten", "20 ST",
                 "Bayer Austria GmbH", false, "12345678", null);

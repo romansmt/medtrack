@@ -25,6 +25,6 @@ public class PatientService {
     }
 
     private static PatientResponse toResponse(Patient patient) {
-        return new PatientResponse(patient.getId(), patient.getSvnr(), patient.getName());
+        return new PatientResponse(patient.getId(), patient.getSvnr(), patient.getName(), patient.getMedtrackId());
     }
 }

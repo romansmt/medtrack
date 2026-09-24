@@ -12,17 +12,20 @@ export function PatientSelector() {
   }
 
   return (
-    <select
-      className="patient-selector"
-      value={selectedPatient?.svnr ?? ""}
-      onChange={(e) => selectPatient(e.target.value)}
-      aria-label="Demo-Patient wählen"
-    >
-      {patients.map((patient) => (
-        <option key={patient.svnr} value={patient.svnr}>
-          {patient.name}
-        </option>
-      ))}
-    </select>
+    <div className="patient-selector-wrap">
+      <select
+        className="patient-selector"
+        value={selectedPatient?.svnr ?? ""}
+        onChange={(e) => selectPatient(e.target.value)}
+        aria-label="Demo-Patient wählen"
+      >
+        {patients.map((patient) => (
+          <option key={patient.svnr} value={patient.svnr}>
+            {patient.name}
+          </option>
+        ))}
+      </select>
+      {selectedPatient && <span className="patient-selector__id">{selectedPatient.medtrackId}</span>}
+    </div>
   );
 }

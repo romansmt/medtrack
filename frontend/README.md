@@ -66,7 +66,8 @@ frontend/
 │   │   ├── AppShell.tsx / .css
 │   │   ├── Icon.tsx           The IconName union lives here - see "Allowed icon tags" below.
 │   │   ├── navItems.ts        Single source of truth for nav routes/labels/icons.
-│   │   └── PatientSelector.tsx
+│   │   └── PatientSelector.tsx   Two-line: the name dropdown, plus the selected patient's
+│   │                             medtrackId in small text underneath (see Conventions).
 │   ├── pages/                  One component per route (wired up in App.tsx) - see "Routes" below.
 │   │   ├── onboardingSlides.ts  Data (not a component) for ConsentPage's 4-slide carousel.
 │   │   └── registration/        The 3 steps of RegistrationPage's flow, one file each (unlike
@@ -113,6 +114,7 @@ Before any route renders, `App.tsx` gates on `useConsent()` (see `ConsentPage`),
 - **An expand/collapse `<button>` must never contain another interactive `<button>`.** Nested buttons are invalid HTML; browsers silently "recover" from it visually, so nothing looks wrong on screen, but React logs a hydration-error warning in the console and screen readers/keyboard nav break. `PharmacyCard` hit this once (its favorite-toggle button was nested inside the expand button) - see the same PROGRESS.md entry. If a card needs both a big "expand" click zone and a smaller "action" button inside its header, they must be siblings, not parent/child.
 - **Registration (once) vs. the patient dropdown (anytime) are deliberately separate concerns.** `RegistrationPage` establishes *which* patient you are, one time, by calling the same `selectPatient()` that the header's `PatientSelector` dropdown also calls. After registering, the dropdown still works exactly as before, for quickly previewing other demo patients - that's intentional (see `docs/PROGRESS.md`'s TASK-36 entry for why), not a leftover that should be locked down.
 - **The SVNR→birthdate decode (`ddMMyy` from the last 6 digits) is duplicated on purpose**, once in the backend (`MockEHealthCardAdapter.dateOfBirthFromSvnr`) and once in the frontend (`ConfirmCardDataStep.birthDateFromSvnr`), so the confirm form can validate instantly as the user edits the SVNR field, not just after a round trip. If this decoding logic ever changes (e.g. the century-inference heuristic), change it in both places.
+- **`medtrackId` is a real, persisted, unique per-patient value** (`patient.medtrack_id` in the database, not computed client-side) - unlike the e-card's card serial/carrier/expiry fields, which are deliberately regenerated on every request since nothing depends on them being stable. Don't treat `medtrackId` the same way those are treated (e.g. don't derive or reformat it from the SVNR) - always take it from the API response (`Patient.medtrackId` / `ECardDetails.medtrackId`), since it's meant to be MedTrack's own stable account number, analogous to a real insurer's customer number being separate from your SVNR.
 
 ## Allowed icon tags
 
@@ -140,7 +142,7 @@ Defined once in [`theme.css`](src/theme.css), consumed via `var(--token-name)` e
 | `--radius-pill` | `999px` | Buttons, the patient selector, chips |
 | `--shell-max-width` | `960px` | Max content width on wide screens |
 | `--bottom-nav-height` | `64px` | Mobile bottom tab bar height |
-| `--header-height` | `56px` | Header height |
+| `--header-height` | `68px` | Header height - two lines (name + MedTrack-ID) in `PatientSelector`, not one |
 
 ## Environment variables
 

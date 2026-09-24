@@ -22,12 +22,17 @@ public class Patient {
     @Column(name = "name", nullable = false)
     private String name;
 
+    // MedTrack's own account/customer number - separate from the government-issued svnr above.
+    @Column(name = "medtrack_id", nullable = false, unique = true, length = 20)
+    private String medtrackId;
+
     protected Patient() {
     }
 
-    public Patient(String svnr, String name) {
+    public Patient(String svnr, String name, String medtrackId) {
         this.svnr = svnr;
         this.name = name;
+        this.medtrackId = medtrackId;
     }
 
     public Long getId() {
@@ -48,5 +53,13 @@ public class Patient {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getMedtrackId() {
+        return medtrackId;
+    }
+
+    public void setMedtrackId(String medtrackId) {
+        this.medtrackId = medtrackId;
     }
 }

@@ -1,0 +1,70 @@
+.pharmacies-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.pharmacies-page__filter {
+  display: flex;
+  gap: 8px;
+}
+
+.pharmacies-page__filter button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-pill);
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.pharmacies-page__filter button.is-active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+.pharmacies-page__hint {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.pharmacies-page__results {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 16px;
+}
+
+.pharmacies-page__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pharmacies-page__map {
+  height: 260px;
+}
+
+@media (min-width: 768px) {
+  .pharmacies-page__results {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .pharmacies-page__list {
+    flex: 1.1;
+    min-width: 0;
+  }
+
+  .pharmacies-page__map {
+    flex: 1;
+    height: auto;
+    align-self: stretch;
+    position: sticky;
+    top: 80px;
+    min-height: 420px;
+  }
+}

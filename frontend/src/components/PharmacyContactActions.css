@@ -1,0 +1,19 @@
+.pharmacy-contact-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pharmacy-contact-actions__item {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  color: var(--color-text);
+}
+
+.pharmacy-contact-actions__item--disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}

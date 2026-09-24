@@ -1,0 +1,26 @@
+.favorite-button {
+  border: none;
+  background: none;
+  padding: 6px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.favorite-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.favorite-button.is-active {
+  color: var(--color-primary);
+}
+
+/* SVG presentation attributes (fill="none" on the path) are overridden by this CSS rule,
+   so toggling fill here is enough to switch the heart between outline and filled. */
+.favorite-button.is-active svg {
+  fill: currentColor;
+}

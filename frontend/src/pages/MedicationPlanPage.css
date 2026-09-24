@@ -1,0 +1,264 @@
+.medication-plan-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.medication-plan-page h2 {
+  font-size: 1.05rem;
+  margin: 0 0 10px;
+}
+
+.medication-plan-page__due-today ul,
+.medication-plan-page__schedules ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.due-row,
+.schedule-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 12px 16px;
+}
+
+.due-row__info,
+.schedule-row__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.due-row__name,
+.schedule-row__name {
+  font-weight: 600;
+}
+
+.due-row__meta,
+.schedule-row__meta,
+.schedule-row__dates {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.due-row__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.due-row__confirm {
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.due-row__skip {
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.due-row__done {
+  color: var(--color-success);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.due-row__skipped {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.schedule-row__stop {
+  border: 1px solid var(--color-border);
+  background: none;
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.medication-plan-page__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 40px 20px;
+}
+
+.medication-plan-page__empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-bg);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.medication-plan-page__empty h2 {
+  margin: 0;
+}
+
+.medication-plan-page__empty p {
+  margin: 0;
+  color: var(--color-text-muted);
+  max-width: 360px;
+}
+
+.medication-plan-page__add-button {
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  padding: 12px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.add-schedule-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 16px;
+}
+
+.add-schedule-form h2 {
+  margin: 0;
+}
+
+.add-schedule-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.add-schedule-form input {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.add-schedule-form__selected-drug {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--color-bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
+.add-schedule-form__selected-drug button {
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.add-schedule-form__dates {
+  display: flex;
+  gap: 10px;
+}
+
+.add-schedule-form__dates label {
+  flex: 1;
+}
+
+.add-schedule-form__times {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.add-schedule-form__time-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-schedule-form__time-row button {
+  border: none;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.add-schedule-form__times > button {
+  align-self: flex-start;
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.add-schedule-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.add-schedule-form__actions button[type="button"] {
+  border: 1px solid var(--color-border);
+  background: none;
+  border-radius: var(--radius-pill);
+  padding: 10px 18px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.add-schedule-form__actions button[type="submit"] {
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  padding: 10px 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-schedule-form__actions button[type="submit"]:disabled {
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}

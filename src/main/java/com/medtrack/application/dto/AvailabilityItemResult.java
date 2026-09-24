@@ -1,6 +1,7 @@
 package com.medtrack.application.dto;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 public record AvailabilityItemResult(
         Long drugId,
@@ -9,5 +10,6 @@ public record AvailabilityItemResult(
         String packSize,
         int requestedQuantity,
         boolean inStock,
-        BigDecimal price) {
+        BigDecimal price,
+        Instant lastUpdated) {
 }

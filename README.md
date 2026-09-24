@@ -45,17 +45,27 @@ Domain         → the core model — Patient, Prescription, Pharmacy, Drug, Res
 
 ## Tech stack
 
+**Backend**
 - **Java 21** / **Spring Boot 3** — REST API, dependency injection, scheduling
 - **PostgreSQL** + **Flyway** — versioned, additive schema migrations (8 and counting)
 - **springdoc-openapi** — interactive Swagger UI generated straight from the code
 - **JUnit 5**, **Mockito**, **AssertJ**, **Testcontainers** — unit tests for business logic, real-Postgres integration tests for the full HTTP-to-database path
 - **Docker Compose** — one-command local Postgres for development
 
+**Frontend** (`frontend/`)
+- **TypeScript** / **React 19** / **Vite**
+- **React Router** — client-side routing
+- **TanStack Query** — server-state fetching/caching against the REST API
+- **Leaflet** / **react-leaflet** — pharmacy-locator maps, backed by the real OpenStreetMap tile service
+- Plain CSS with a small custom design-token system — no CSS framework, no component library
+
 ## Project status
 
-The backend is complete and tested: prescriptions, drug catalog, availability, pharmacy locator, pricing/comparison, favorites/reservations, and medication-adherence tracking are all implemented, migrated, and covered by an automated test suite. A React frontend is the next milestone — see [docs/TASKS.md](docs/TASKS.md) for the live backlog and [docs/PROGRESS.md](docs/PROGRESS.md) for a task-by-task write-up of what was built and why.
+**Both the backend and frontend are complete.** Every feature — prescriptions, drug catalog, availability check, pharmacy locator, pricing/comparison, favorites/reservations, medication-adherence tracking — has a working REST API *and* a working UI, end to end. See [docs/TASKS.md](docs/TASKS.md) for the full backlog (all done), [docs/PROGRESS.md](docs/PROGRESS.md) for a task-by-task write-up of what was built and why, and [docs/FEATURE_MAPPING.md](docs/FEATURE_MAPPING.md) for a table mapping every feature to its exact backend service and frontend page.
 
 ## Getting started
+
+**Backend:**
 
 ```bash
 docker-compose up -d
@@ -72,8 +82,20 @@ Runs the full automated test suite (spins up its own throwaway Postgres via Test
 
 If `mvn`/`java` aren't on your PATH, or you hit a database connection error, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — it also has copy-pasteable verification commands for every feature area.
 
+**Frontend** (needs the backend running first — see above):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Opens on `http://localhost:5173`. See [frontend/README.md](frontend/README.md) for the stack, project structure, and a troubleshooting section for common frontend-specific issues.
+
 ## Documentation
 
 - [docs/TASKS.md](docs/TASKS.md) — the full backlog, organized by build phase
 - [docs/PROGRESS.md](docs/PROGRESS.md) — a detailed write-up of what each task built and the reasoning behind non-obvious decisions
-- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — local setup, running, testing, and troubleshooting, including a full verification walkthrough per feature area
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — backend local setup, running, testing, and troubleshooting, including a full verification walkthrough per feature area
+- [docs/FEATURE_MAPPING.md](docs/FEATURE_MAPPING.md) — every feature mapped to its exact backend service and frontend page/component
+- [frontend/README.md](frontend/README.md) — frontend stack, project structure, conventions, and troubleshooting

@@ -192,4 +192,4 @@ Update README/TASKS/PROGRESS; add a short doc mapping ApoScout/ApoApp features �
 
 ---
 
-Status: TASK-12–28 done (see PROGRESS.md for the detailed writeup); TASK-29 onward not started. All backend phases (2A-2D) complete. Remaining work is the rest of the frontend (Phase 2E) and docs polish (Phase 2F).
+Status: TASK-00–35 all done (see PROGRESS.md for the detailed per-task writeup, and FEATURE_MAPPING.md for the ApoScout/ApoApp → MedTrack feature table added by TASK-35). All backend phases (2A-2D) and the full frontend (Phase 2E) are complete; every nav route is wired to the real backend, not a placeholder.

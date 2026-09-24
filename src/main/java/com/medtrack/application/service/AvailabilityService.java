@@ -76,6 +76,6 @@ public class AvailabilityService {
         BigDecimal price = pricingService.getPrice(drug, inventory);
 
         return new AvailabilityItemResult(item.drugId(), drug.getName(), drug.getForm(), drug.getPackSize(),
-                item.quantity(), inStock, price);
+                item.quantity(), inStock, price, inventory != null ? inventory.getLastUpdated() : null);
     }
 }

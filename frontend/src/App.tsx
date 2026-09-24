@@ -15,7 +15,7 @@ import { SearchPage } from "./pages/SearchPage";
 
 export function App() {
   const { hasConsented, giveConsent } = useConsent();
-  const { isRegistered, completeRegistration } = useRegistration();
+  const { isRegistered, isLinked, completeRegistration, reopenRegistration } = useRegistration();
 
   if (!hasConsented) {
     return <ConsentPage onAccept={giveConsent} />;
@@ -27,7 +27,7 @@ export function App() {
 
   return (
     <Routes>
-      <Route element={<AppShell />}>
+      <Route element={<AppShell isLinked={isLinked} onReopenRegistration={reopenRegistration} />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/pharmacies" element={<PharmaciesPage />} />

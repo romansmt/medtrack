@@ -133,7 +133,8 @@
   gap: 10px;
 }
 
-.registration-step__row label {
+.registration-step__row label,
+.registration-step__row button {
   flex: 1;
 }
 
@@ -149,12 +150,60 @@
   color: var(--color-text-muted);
   cursor: pointer;
   font-size: 0.9rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.registration-step__file-drop.is-dragging {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+.registration-step__preview {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.registration-step__preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-border);
+}
+
+.registration-step__filename {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.registration-step__secondary {
+  border: 1px solid var(--color-border);
+  background: none;
+  border-radius: var(--radius-pill);
+  padding: 14px;
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
 }
 
 .registration-step__status {
   margin: 0;
   font-size: 0.85rem;
   color: var(--color-text-muted);
+}
+
+.registration-step__manual-entry {
+  border: none;
+  background: none;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px;
+  text-decoration: underline;
 }
 
 .registration-step__error {

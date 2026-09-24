@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import { IdentityLinkBanner } from "../components/IdentityLinkBanner";
 import { Icon } from "./Icon";
 import { PatientSelector } from "./PatientSelector";
 import { allNavItems, primaryNavItems, secondaryNavItems } from "./navItems";
 import "./AppShell.css";
 
-export function AppShell() {
+export function AppShell({
+  isLinked,
+  onReopenRegistration,
+}: {
+  isLinked: boolean;
+  onReopenRegistration: () => void;
+}) {
   const [moreOpen, setMoreOpen] = useState(false);
 
   return (
@@ -27,6 +34,7 @@ export function AppShell() {
       </header>
 
       <main className="app-main">
+        {!isLinked && <IdentityLinkBanner onReopenRegistration={onReopenRegistration} />}
         <Outlet />
       </main>
 

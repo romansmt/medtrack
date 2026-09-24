@@ -1,0 +1,33 @@
+.identity-link-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  border-radius: var(--radius-card);
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+}
+
+.identity-link-banner svg {
+  flex-shrink: 0;
+}
+
+.identity-link-banner span {
+  flex: 1;
+  min-width: 200px;
+}
+
+.identity-link-banner button {
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}

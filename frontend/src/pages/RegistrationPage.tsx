@@ -8,7 +8,7 @@ import "./RegistrationPage.css";
 
 type Step = "login" | "scan" | "confirm";
 
-export function RegistrationPage({ onComplete }: { onComplete: () => void }) {
+export function RegistrationPage({ onComplete }: { onComplete: (linked: boolean) => void }) {
   const { selectPatient } = usePatient();
   const [step, setStep] = useState<Step>("login");
   const [identity, setIdentity] = useState<IdAustriaLoginResult | null>(null);
@@ -19,14 +19,14 @@ export function RegistrationPage({ onComplete }: { onComplete: () => void }) {
       <div className="registration-card">
         <div className="registration-topbar">
           <span className="registration-logo">MedTrack</span>
-          <button type="button" className="registration-skip" onClick={onComplete}>
+          <button type="button" className="registration-skip" onClick={() => onComplete(false)}>
             Ohne Anmeldung fortfahren
           </button>
         </div>
         <p className="registration-skip-hint">
           Sie können die ID-Austria-Anmeldung und den e-card-Scan überspringen und MedTrack ohne
           Verknüpfung Ihrer Daten nutzen - wählen Sie dazu später einen Demo-Patienten über das Menü
-          oben.
+          oben. Sie können die Anmeldung jederzeit über "ID Austria verknüpfen" nachholen.
         </p>
         <div className="registration-dots">
           {(["login", "scan", "confirm"] as Step[]).map((s) => (
@@ -51,6 +51,20 @@ export function RegistrationPage({ onComplete }: { onComplete: () => void }) {
               setCardDetails(details);
               setStep("confirm");
             }}
+            onManualEntry={() => {
+              const [firstName, ...rest] = identity.fullName.split(" ");
+              setCardDetails({
+                svnr: "",
+                firstName: firstName ?? "",
+                lastName: rest.join(" "),
+                dateOfBirth: identity.dateOfBirth,
+                cardSerialNumber: "",
+                carrierNumber: "",
+                carrierName: "ÖGK",
+                expiryDate: "",
+              });
+              setStep("confirm");
+            }}
           />
         )}
 
@@ -61,7 +75,7 @@ export function RegistrationPage({ onComplete }: { onComplete: () => void }) {
             onBack={() => setStep("scan")}
             onConfirm={(svnr) => {
               selectPatient(svnr);
-              onComplete();
+              onComplete(true);
             }}
           />
         )}

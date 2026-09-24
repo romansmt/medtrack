@@ -39,6 +39,8 @@ frontend/
 │   │   │                    and not a whole route's own content (that's pages/).
 │   │   ├── DrugSearchCombobox.tsx   Search-as-you-type drug picker (Search page, add-schedule flow).
 │   │   ├── FavoriteButton.tsx       Heart-icon toggle; dumb (isFavorite + onToggle props).
+│   │   ├── IdentityLinkBanner.tsx   Shown on every page while !isLinked; its button re-opens
+│   │   │                            RegistrationPage via reopenRegistration().
 │   │   ├── LocationPicker.tsx       Sets UserLocationContext via the geocode endpoint.
 │   │   ├── NextOpenPharmacyCard.tsx
 │   │   ├── PharmacyCard.tsx         The shared expandable pharmacy card - see below.
@@ -54,8 +56,12 @@ frontend/
 │   ├── hooks/
 │   │   ├── useConsent.ts      localStorage-backed onboarding-seen flag. Not a context - only
 │   │   │                      App.tsx reads/writes it.
-│   │   └── useRegistration.ts localStorage-backed "has registered" flag - same shape as
-│   │                          useConsent. Also only read/written by App.tsx.
+│   │   └── useRegistration.ts localStorage-backed, but two flags, not one: isRegistered (the
+│   │                          one-time gate has been passed, by any path) and isLinked (passed
+│   │                          specifically via a completed e-card scan, never by skipping).
+│   │                          reopenRegistration() clears isRegistered only, so re-opening the
+│   │                          flow doesn't discard an already-linked identity. Read/written by
+│   │                          App.tsx and (isLinked + reopenRegistration only) AppShell.
 │   ├── layout/                App shell: header, responsive nav, icons. Not page content.
 │   │   ├── AppShell.tsx / .css
 │   │   ├── Icon.tsx           The IconName union lives here - see "Allowed icon tags" below.
@@ -94,7 +100,7 @@ frontend/
 | `/reservations` | `ReservationsPage` | TASK-33 |
 | `/prescriptions` | `PrescriptionsPage` | Wires up the original ÖGK slice's endpoint (TASK-34) |
 
-Before any route renders, `App.tsx` gates on `useConsent()` (see `ConsentPage`), then on `useRegistration()` (see `RegistrationPage` - a one-time mock ID Austria login + e-card scan that establishes which patient you are; not a route itself, and not shown again once completed).
+Before any route renders, `App.tsx` gates on `useConsent()` (see `ConsentPage`), then on `useRegistration().isRegistered` (see `RegistrationPage` - a one-time mock ID Austria login + e-card scan that establishes which patient you are; not a route itself). This gate can be skipped, and re-opened later from *inside* the app via `IdentityLinkBanner` (shown on every page while `!isLinked`) calling `reopenRegistration()` - so "not shown again" only holds until the user asks for it again.
 
 ## Conventions
 
@@ -179,4 +185,4 @@ Real bug, not noise - see the nested-button convention above. `read_console_mess
 This is an IDE cache/VCS-watcher issue, not a code issue - `File → Reload All from Disk`, or reopen the project if that doesn't help. Verify the actual state with `git log`/`git status` in a terminal first before assuming work was lost.
 
 **Stuck on the registration screen (`RegistrationPage`) and can't get into the app.**
-This is expected for any name that isn't one of the four seeded demo patients (Anna Gruber, Max Bauer, Lena Hofer, Paul Wagner) - the e-card scan step 404s on purpose, since only those four have a fake card to "scan." If a *known* demo name still fails at the confirm step, you likely typed a birthdate that doesn't match that patient's real seeded SVNR (the last 6 digits are their real `ddMMyy`) - see the TASK-36 entry in `docs/PROGRESS.md`. To redo registration from scratch during development, clear `localStorage['medtrack.registrationComplete']`.
+Three ways out, all on `RegistrationPage`: "Ohne Anmeldung fortfahren" in the top bar (skips entirely), "Kein Foto zur Hand? Werte manuell eingeben" on the e-card step (skips just the photo, jumps to the confirm form with blank fields to fill in yourself), or actually finish the flow. If you're trying to finish it and it won't go through: 404 at the scan step is expected for any name that isn't one of the four seeded demo patients (Anna Gruber, Max Bauer, Lena Hofer, Paul Wagner) - only those four have a fake card to "scan" (or fake data to manually match). If a *known* demo name still fails at the confirm step (scanned or manually typed), you likely have a birthdate that doesn't match that patient's real seeded SVNR (the last 6 digits are their real `ddMMyy`) - see the TASK-36 entry in `docs/PROGRESS.md`. To redo registration from scratch during development, clear `localStorage['medtrack.registrationComplete']` (this alone won't discard `medtrack.identityLinked` - clear that too if you want to re-test the "not linked" banner).

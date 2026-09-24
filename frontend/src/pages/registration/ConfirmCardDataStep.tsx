@@ -47,7 +47,7 @@ export function ConfirmCardDataStep({
     if (svnrBirthDate !== registeredDateOfBirth) {
       setError(
         "Das in der SVNR enthaltene Geburtsdatum stimmt nicht mit dem bei der ID-Austria-Anmeldung " +
-          "angegebenen Geburtsdatum überein. Bitte überprüfen Sie die gescannten Daten.",
+          "angegebenen Geburtsdatum überein. Bitte überprüfen Sie die eingegebenen Daten.",
       );
       return;
     }
@@ -63,7 +63,7 @@ export function ConfirmCardDataStep({
       </div>
       <h1>Daten überprüfen</h1>
       <p className="registration-step__intro">
-        Bitte überprüfen Sie die von Ihrer e-card gescannten Daten, bevor Sie fortfahren.
+        Bitte überprüfen und vervollständigen Sie die e-card-Daten, bevor Sie fortfahren.
       </p>
 
       <label>

@@ -34,10 +34,15 @@ export function PatientProvider({ children }: { children: ReactNode }) {
   const patients = data ?? [];
   const [selectedSvnr, setSelectedSvnr] = useState<string | null>(readStoredSvnr);
 
+  // Only fills in a default when nothing has ever been selected. Deliberately does NOT "correct" a
+  // non-null selection that's briefly missing from `patients` - that's not a stale/invalid pointer,
+  // it's a normal race after registering: selectPatient(newSvnr) fires in the same tick as the
+  // create-account mutation's own query invalidation, so this effect can run again before the
+  // refetch (which will include the new patient) resolves. Patients are never removed in this app,
+  // so a real "selection no longer exists" case can't otherwise happen.
   useEffect(() => {
     if (patients.length === 0) return;
-    const stillExists = patients.some((p) => p.svnr === selectedSvnr);
-    if (!stillExists) {
+    if (selectedSvnr === null) {
       setSelectedSvnr(patients[0].svnr);
     }
   }, [patients, selectedSvnr]);

@@ -32,10 +32,16 @@ public class RegistrationService {
         return toResponse(eHealthCardPort.scanCard(fullName));
     }
 
-    // Unlike scanCard/loginWithIdAustria, this writes a new Patient row - not read-only.
+    // Unlike scanCard/loginWithIdAustria, this writes a new Patient row - not read-only. email is
+    // null for the ID-Austria registration path, populated for the standard registration path.
     @Transactional
-    public ECardDetailsResponse createAccount(String fullName, LocalDate dateOfBirth) {
-        return toResponse(eHealthCardPort.issueNewCard(fullName, dateOfBirth));
+    public ECardDetailsResponse createAccount(String fullName, LocalDate dateOfBirth, String email) {
+        return toResponse(eHealthCardPort.issueNewCard(fullName, dateOfBirth, email));
+    }
+
+    @Transactional(readOnly = true)
+    public ECardDetailsResponse loginStandard(String email) {
+        return toResponse(eHealthCardPort.loginByEmail(email));
     }
 
     private static ECardDetailsResponse toResponse(ECardDetails details) {

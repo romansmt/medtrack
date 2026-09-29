@@ -3,15 +3,15 @@ import type { ECardDetails } from "../api/registration";
 import { usePatient } from "../context/PatientContext";
 import { ConfirmCardDataStep } from "./registration/ConfirmCardDataStep";
 import { ECardScanStep } from "./registration/ECardScanStep";
-import { IdAustriaLoginStep, type IdAustriaLoginResult } from "./registration/IdAustriaLoginStep";
+import { AuthEntryStep, type IdAustriaLoginResult } from "./registration/AuthEntryStep";
 import "./AuthModal.css";
 
 type Step = "start" | "scan" | "confirm";
 
-// The pseudo-ID-Austria login/registration overlay. Sits on top of the app (see App.tsx), not in
-// place of it - closing it (skip, or completing either flow) just removes this component, no
-// navigation involved.
-export function AuthModal({ onComplete }: { onComplete: (linked: boolean) => void }) {
+// The Anmelden/Registrieren overlay. Opened deliberately from the header's account button or the
+// "not linked" banner (see App.tsx) - never forced open. Sits on top of the app, not in place of it:
+// routes keep rendering underneath, closing this just removes the component, no navigation involved.
+export function AuthModal({ onSuccess, onCancel }: { onSuccess: (linked: boolean) => void; onCancel: () => void }) {
   const { selectPatient } = usePatient();
   const [step, setStep] = useState<Step>("start");
   const [identity, setIdentity] = useState<IdAustriaLoginResult | null>(null);
@@ -22,23 +22,13 @@ export function AuthModal({ onComplete }: { onComplete: (linked: boolean) => voi
 
   return (
     <div className="auth-modal-backdrop">
-      <div className="auth-modal" role="dialog" aria-modal="true" aria-label="ID Austria Anmeldung">
+      <div className="auth-modal" role="dialog" aria-modal="true" aria-label="Anmelden oder registrieren">
         <div className="auth-modal__topbar">
           <span className="auth-modal__logo">MedTrack</span>
-          <button
-            type="button"
-            className="auth-modal__close"
-            onClick={() => onComplete(false)}
-            aria-label="Schließen und ohne Anmeldung fortfahren"
-          >
+          <button type="button" className="auth-modal__close" onClick={onCancel} aria-label="Abbrechen">
             ×
           </button>
         </div>
-        <p className="auth-modal__skip-hint">
-          Sie können diesen Dialog schließen und MedTrack ohne Verknüpfung Ihrer Daten nutzen -
-          wählen Sie dazu später einen Demo-Patienten über das Menü oben. Sie können ID Austria
-          jederzeit über den Hinweis im Menü erneut öffnen.
-        </p>
         <div className="auth-modal__dots">
           {(["start", "scan", "confirm"] as Step[]).map((s) => (
             <span key={s} className={"auth-modal__dot" + (s === step ? " is-active" : "")} />
@@ -46,17 +36,21 @@ export function AuthModal({ onComplete }: { onComplete: (linked: boolean) => voi
         </div>
 
         {step === "start" && (
-          <IdAustriaLoginStep
-            onLoginSuccess={(result) => {
+          <AuthEntryStep
+            onIdAustriaLoginSuccess={(result) => {
               setIdentity(result);
               setCameFromRegister(false);
               setStep("scan");
             }}
-            onAccountCreated={(details) => {
+            onIdAustriaAccountCreated={(details) => {
               setIdentity({ fullName: `${details.firstName} ${details.lastName}`, dateOfBirth: details.dateOfBirth });
               setCardDetails(details);
               setCameFromRegister(true);
               setStep("confirm");
+            }}
+            onStandardAuthSuccess={(details) => {
+              selectPatient(details.svnr);
+              onSuccess(false);
             }}
           />
         )}
@@ -94,7 +88,7 @@ export function AuthModal({ onComplete }: { onComplete: (linked: boolean) => voi
             onBack={() => setStep(cameFromRegister ? "start" : "scan")}
             onConfirm={(svnr) => {
               selectPatient(svnr);
-              onComplete(true);
+              onSuccess(true);
             }}
           />
         )}

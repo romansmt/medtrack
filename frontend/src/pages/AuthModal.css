@@ -48,15 +48,6 @@
   padding: 0 4px;
 }
 
-.auth-modal__skip-hint {
-  width: 100%;
-  margin: -8px 0 0;
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  text-align: left;
-  line-height: 1.4;
-}
-
 .auth-modal__dots {
   display: flex;
   gap: 6px;
@@ -115,6 +106,53 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.registration-step__method-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: -6px;
+}
+
+.registration-step__method-toggle button {
+  border: none;
+  background: none;
+  padding: 4px 2px;
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.registration-step__method-toggle button.is-active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.registration-step__checkbox-row {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  text-align: left;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.registration-step__checkbox-row input {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.registration-step__hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-align: left;
+  line-height: 1.4;
+}
+
 .registration-step__icon {
   width: 64px;
   height: 64px;
@@ -165,10 +203,12 @@
   width: 100%;
   display: flex;
   gap: 10px;
+  min-width: 0;
 }
 
 .registration-step__row label,
 .registration-step__row button {
+  min-width: 0;
   flex: 1;
 }
 

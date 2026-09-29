@@ -26,6 +26,11 @@ public class Patient {
     @Column(name = "medtrack_id", nullable = false, unique = true, length = 20)
     private String medtrackId;
 
+    // Only set for accounts created via standard (email/password) registration - null for the
+    // seeded demo patients and for ID-Austria-only accounts.
+    @Column(name = "email", unique = true)
+    private String email;
+
     protected Patient() {
     }
 
@@ -61,5 +66,13 @@ public class Patient {
 
     public void setMedtrackId(String medtrackId) {
         this.medtrackId = medtrackId;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

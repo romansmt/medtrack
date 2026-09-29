@@ -5,6 +5,7 @@ import com.medtrack.domain.ECardDetails;
 import com.medtrack.domain.EHealthCardSession;
 import com.medtrack.domain.Patient;
 import com.medtrack.domain.PatientAlreadyExistsException;
+import com.medtrack.domain.PatientEmailAlreadyExistsException;
 import com.medtrack.domain.PatientNotFoundException;
 import com.medtrack.infrastructure.persistence.PatientRepository;
 import org.springframework.stereotype.Component;
@@ -43,13 +44,23 @@ public class MockEHealthCardAdapter implements EHealthCardPort {
     }
 
     @Override
-    public ECardDetails issueNewCard(String fullName, LocalDate dateOfBirth) {
+    public ECardDetails issueNewCard(String fullName, LocalDate dateOfBirth, String email) {
         if (patientRepository.findByNameIgnoreCase(fullName).isPresent()) {
             throw new PatientAlreadyExistsException(fullName);
         }
+        if (email != null && patientRepository.findByEmailIgnoreCase(email).isPresent()) {
+            throw new PatientEmailAlreadyExistsException(email);
+        }
 
-        Patient patient = patientRepository.save(
-                new Patient(generateUniqueSvnr(dateOfBirth), fullName, generateNextMedtrackId()));
+        Patient patient = new Patient(generateUniqueSvnr(dateOfBirth), fullName, generateNextMedtrackId());
+        patient.setEmail(email);
+        return toECardDetails(patientRepository.save(patient));
+    }
+
+    @Override
+    public ECardDetails loginByEmail(String email) {
+        Patient patient = patientRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new NoSuchElementException("No account found for email " + email));
         return toECardDetails(patient);
     }
 

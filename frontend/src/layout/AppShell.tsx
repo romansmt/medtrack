@@ -9,9 +9,11 @@ import "./AppShell.css";
 export function AppShell({
   isLinked,
   onOpenAuthModal,
+  onOpenAccount,
 }: {
   isLinked: boolean;
   onOpenAuthModal: () => void;
+  onOpenAccount: () => void;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -30,7 +32,12 @@ export function AppShell({
             </NavLink>
           ))}
         </nav>
-        <PatientSelector />
+        <div className="app-header__account-group">
+          <PatientSelector />
+          <button type="button" className="account-button" onClick={onOpenAccount} aria-label="Mein Konto">
+            <Icon name="user" size={20} />
+          </button>
+        </div>
       </header>
 
       <main className="app-main">

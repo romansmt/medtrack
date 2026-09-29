@@ -8,7 +8,13 @@ export type IconName =
   | "doc"
   | "more"
   | "shield"
-  | "camera";
+  | "camera"
+  | "user"
+  | "settings"
+  | "feedback"
+  | "info"
+  | "help"
+  | "chevron";
 
 const paths: Record<IconName, string> = {
   home: "M3 11.5 12 4l9 7.5M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9",
@@ -21,6 +27,12 @@ const paths: Record<IconName, string> = {
   more: "M5 12h.01M12 12h.01M19 12h.01",
   shield: "M12 3 4 6v6c0 5 3.5 8.5 8 9 4.5-.5 8-4 8-9V6l-8-3Zm-2.5 9 2 2 4-4.5",
   camera: "M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Zm8 9a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z",
+  user: "M9 8a3 3 0 1 0 6 0a3 3 0 1 0-6 0Z M5 20a7 7 0 0 1 14 0",
+  settings: "M9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0Z M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1",
+  feedback: "M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z",
+  info: "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18Z M12 11v6M12 7.5v.01",
+  help: "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18Z M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 1.8-2.5 3.5M12 17v.01",
+  chevron: "M9 6l6 6-6 6",
 };
 
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {

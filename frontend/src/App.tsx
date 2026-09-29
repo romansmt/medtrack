@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { AppShell } from "./layout/AppShell";
 import { useConsent } from "./hooks/useConsent";
 import { useRegistration } from "./hooks/useRegistration";
+import { AccountSheet } from "./pages/AccountSheet";
 import { AuthModal } from "./pages/AuthModal";
 import { ConsentPage } from "./pages/ConsentPage";
 import { FavoritesPage } from "./pages/FavoritesPage";
@@ -17,11 +18,10 @@ import { SearchPage } from "./pages/SearchPage";
 export function App() {
   const { hasConsented, giveConsent } = useConsent();
   const { isRegistered, isLinked, completeRegistration } = useRegistration();
-  // Whether the auth modal is visible right now - separate from isRegistered (whether it has ever
-  // been passed). Initialized once from isRegistered so it opens automatically on a first-ever
-  // visit, but afterwards it's just local UI state: AppShell's "ID Austria verknüpfen" banner
-  // button can reopen it anytime without touching persisted registration state at all.
-  const [authModalOpen, setAuthModalOpen] = useState(() => !isRegistered);
+  // Both start closed - neither is ever forced open. Reached only via the header's account button,
+  // the "not linked" banner, or a deliberate "Anmelden" tap inside the account sheet.
+  const [accountSheetOpen, setAccountSheetOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   if (!hasConsented) {
     return <ConsentPage onAccept={giveConsent} />;
@@ -30,7 +30,15 @@ export function App() {
   return (
     <>
       <Routes>
-        <Route element={<AppShell isLinked={isLinked} onOpenAuthModal={() => setAuthModalOpen(true)} />}>
+        <Route
+          element={
+            <AppShell
+              isLinked={isLinked}
+              onOpenAuthModal={() => setAuthModalOpen(true)}
+              onOpenAccount={() => setAccountSheetOpen(true)}
+            />
+          }
+        >
           <Route path="/" element={<HomePage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/pharmacies" element={<PharmaciesPage />} />
@@ -42,12 +50,25 @@ export function App() {
         </Route>
       </Routes>
 
+      {accountSheetOpen && (
+        <AccountSheet
+          isRegistered={isRegistered}
+          isLinked={isLinked}
+          onOpenAuth={() => {
+            setAccountSheetOpen(false);
+            setAuthModalOpen(true);
+          }}
+          onClose={() => setAccountSheetOpen(false)}
+        />
+      )}
+
       {authModalOpen && (
         <AuthModal
-          onComplete={(linked) => {
+          onSuccess={(linked) => {
             completeRegistration(linked);
             setAuthModalOpen(false);
           }}
+          onCancel={() => setAuthModalOpen(false)}
         />
       )}
     </>

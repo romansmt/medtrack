@@ -1,6 +1,7 @@
 package com.medtrack.api;
 
 import com.medtrack.domain.PatientAlreadyExistsException;
+import com.medtrack.domain.PatientEmailAlreadyExistsException;
 import com.medtrack.domain.PatientNotFoundException;
 import com.medtrack.domain.ReservationNotSupportedException;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(PatientAlreadyExistsException.class)
     public ResponseEntity<String> handlePatientAlreadyExists(PatientAlreadyExistsException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(exception.getMessage());
+    }
+
+    @ExceptionHandler(PatientEmailAlreadyExistsException.class)
+    public ResponseEntity<String> handlePatientEmailAlreadyExists(PatientEmailAlreadyExistsException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(exception.getMessage());
     }
 

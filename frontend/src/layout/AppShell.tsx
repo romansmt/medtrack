@@ -8,10 +8,10 @@ import "./AppShell.css";
 
 export function AppShell({
   isLinked,
-  onReopenRegistration,
+  onOpenAuthModal,
 }: {
   isLinked: boolean;
-  onReopenRegistration: () => void;
+  onOpenAuthModal: () => void;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -34,7 +34,7 @@ export function AppShell({
       </header>
 
       <main className="app-main">
-        {!isLinked && <IdentityLinkBanner onReopenRegistration={onReopenRegistration} />}
+        {!isLinked && <IdentityLinkBanner onOpenAuthModal={onOpenAuthModal} />}
         <Outlet />
       </main>
 

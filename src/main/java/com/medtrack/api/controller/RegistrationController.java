@@ -34,4 +34,11 @@ public class RegistrationController {
     public ECardDetailsResponse scanCard(@RequestBody ScanCardRequest request) {
         return registrationService.scanCard(request.fullName());
     }
+
+    @PostMapping("/create-account")
+    @Operation(summary = "Register a brand-new MedTrack account not tied to one of the pre-seeded demo patients - "
+            + "issues a fresh SVNR, e-card, and MedTrack-ID")
+    public ECardDetailsResponse createAccount(@RequestBody IdAustriaLoginRequest request) {
+        return registrationService.createAccount(request.fullName(), request.dateOfBirth());
+    }
 }

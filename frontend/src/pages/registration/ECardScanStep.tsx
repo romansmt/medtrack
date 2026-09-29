@@ -111,10 +111,10 @@ export function ECardScanStep({
 
       {notFound && (
         <p className="registration-step__error">
-          Für "{fullName}" wurde keine e-card gefunden. Dieses Demo-Projekt kennt nur die vorhandenen
-          Demo-Patienten: Anna Gruber, Max Bauer, Lena Hofer, Paul Wagner. Wählen Sie ein anderes Foto,
-          gehen Sie zurück und prüfen Sie den bei der Anmeldung eingegebenen Namen, oder geben Sie die
-          Werte manuell ein.
+          Für "{fullName}" wurde keine e-card gefunden - es existiert noch kein MedTrack-Konto mit
+          diesem Namen. Wählen Sie ein anderes Foto, gehen Sie zurück und prüfen Sie den bei der
+          Anmeldung eingegebenen Namen, geben Sie die Werte manuell ein, oder wechseln Sie zu
+          "Registrieren", um ein neues Konto zu erstellen.
         </p>
       )}
 

@@ -29,7 +29,16 @@ public class RegistrationService {
 
     @Transactional(readOnly = true)
     public ECardDetailsResponse scanCard(String fullName) {
-        ECardDetails details = eHealthCardPort.scanCard(fullName);
+        return toResponse(eHealthCardPort.scanCard(fullName));
+    }
+
+    // Unlike scanCard/loginWithIdAustria, this writes a new Patient row - not read-only.
+    @Transactional
+    public ECardDetailsResponse createAccount(String fullName, LocalDate dateOfBirth) {
+        return toResponse(eHealthCardPort.issueNewCard(fullName, dateOfBirth));
+    }
+
+    private static ECardDetailsResponse toResponse(ECardDetails details) {
         return new ECardDetailsResponse(
                 details.svnr(),
                 details.medtrackId(),

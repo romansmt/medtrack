@@ -23,10 +23,13 @@ function writeStored(key: string, value: boolean) {
   }
 }
 
+// Tracks two independent, persisted facts. Whether the auth modal is currently *visible* is a
+// separate, ephemeral concern owned by App.tsx (see authModalOpen there) - reopening the modal
+// later doesn't need to touch either flag here until the user actually completes it again.
 export function useRegistration() {
   const [isRegistered, setIsRegistered] = useState(() => readStored(REGISTERED_KEY));
-  // isLinked is only ever set true by actually completing the ID Austria + e-card flow, never by
-  // skipping - it's what the "not linked yet" banner checks, independent of isRegistered.
+  // isLinked is only ever set true by actually completing the ID Austria + e-card flow (login or
+  // register), never by skipping - it's what the "not linked yet" banner checks.
   const [isLinked, setIsLinked] = useState(() => readStored(LINKED_KEY));
 
   const completeRegistration = (linked: boolean) => {
@@ -38,13 +41,5 @@ export function useRegistration() {
     }
   };
 
-  // Lets someone who skipped (or wants to re-verify) come back to the registration flow later -
-  // only clears the "gate passed" flag, not isLinked, so a previously-linked identity isn't lost
-  // unless they actually complete the flow again.
-  const reopenRegistration = () => {
-    writeStored(REGISTERED_KEY, false);
-    setIsRegistered(false);
-  };
-
-  return { isRegistered, isLinked, completeRegistration, reopenRegistration };
+  return { isRegistered, isLinked, completeRegistration };
 }

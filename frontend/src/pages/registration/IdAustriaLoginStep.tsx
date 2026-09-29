@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useIdAustriaLoginMutation } from "../../api/registration";
+import { ApiError } from "../../api/client";
+import { useCreateAccountMutation, useIdAustriaLoginMutation, type ECardDetails } from "../../api/registration";
 import { Icon } from "../../layout/Icon";
 
 export interface IdAustriaLoginResult {
@@ -7,22 +8,46 @@ export interface IdAustriaLoginResult {
   dateOfBirth: string;
 }
 
-export function IdAustriaLoginStep({ onSuccess }: { onSuccess: (result: IdAustriaLoginResult) => void }) {
+type Mode = "login" | "register";
+
+export function IdAustriaLoginStep({
+  onLoginSuccess,
+  onAccountCreated,
+}: {
+  onLoginSuccess: (result: IdAustriaLoginResult) => void;
+  onAccountCreated: (details: ECardDetails) => void;
+}) {
+  const [mode, setMode] = useState<Mode>("login");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const login = useIdAustriaLoginMutation();
+  const createAccount = useCreateAccountMutation();
 
   const canSubmit = firstName.trim() !== "" && lastName.trim() !== "" && dateOfBirth !== "";
+  const isPending = login.isPending || createAccount.isPending;
+  const isConflict =
+    createAccount.isError && createAccount.error instanceof ApiError && createAccount.error.status === 409;
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    login.reset();
+    createAccount.reset();
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
-    login.mutate(
-      { fullName, dateOfBirth },
-      { onSuccess: (identity) => onSuccess({ fullName: identity.fullName, dateOfBirth: identity.dateOfBirth }) },
-    );
+
+    if (mode === "login") {
+      login.mutate(
+        { fullName, dateOfBirth },
+        { onSuccess: (identity) => onLoginSuccess({ fullName: identity.fullName, dateOfBirth: identity.dateOfBirth }) },
+      );
+    } else {
+      createAccount.mutate({ fullName, dateOfBirth }, { onSuccess: onAccountCreated });
+    }
   };
 
   return (
@@ -30,10 +55,33 @@ export function IdAustriaLoginStep({ onSuccess }: { onSuccess: (result: IdAustri
       <div className="registration-step__icon">
         <Icon name="shield" size={32} />
       </div>
-      <h1>Anmeldung mit ID Austria</h1>
+
+      <div className="registration-step__mode-toggle" role="tablist" aria-label="Anmelden oder registrieren">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "login"}
+          className={mode === "login" ? "is-active" : ""}
+          onClick={() => switchMode("login")}
+        >
+          Anmelden
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "register"}
+          className={mode === "register" ? "is-active" : ""}
+          onClick={() => switchMode("register")}
+        >
+          Registrieren
+        </button>
+      </div>
+
+      <h1>{mode === "login" ? "Anmeldung mit ID Austria" : "Neues Konto registrieren"}</h1>
       <p className="registration-step__intro">
-        Registrieren Sie sich einmalig mit ID Austria, um MedTrack mit Ihrer e-card zu verknüpfen.
-        Diese Anmeldung ist eine Demo-Simulation - es besteht keine echte Verbindung zu ID Austria.
+        {mode === "login"
+          ? "Melden Sie sich mit ID Austria an, um MedTrack mit Ihrer e-card zu verknüpfen. Diese Anmeldung ist eine Demo-Simulation - es besteht keine echte Verbindung zu ID Austria."
+          : "Erstellen Sie ein neues MedTrack-Konto mit ID Austria. Sie erhalten sofort eine eigene SVNR, e-card und MedTrack-ID. Diese Registrierung ist eine Demo-Simulation - es besteht keine echte Verbindung zu ID Austria."}
       </p>
 
       <label>
@@ -49,10 +97,25 @@ export function IdAustriaLoginStep({ onSuccess }: { onSuccess: (result: IdAustri
         <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} required />
       </label>
 
-      {login.isError && <p className="registration-step__error">Anmeldung fehlgeschlagen. Bitte erneut versuchen.</p>}
+      {mode === "login" && login.isError && (
+        <p className="registration-step__error">Anmeldung fehlgeschlagen. Bitte erneut versuchen.</p>
+      )}
+      {mode === "register" && createAccount.isError && (
+        <p className="registration-step__error">
+          {isConflict
+            ? 'Ein Konto mit diesem Namen existiert bereits. Wechseln Sie zu "Anmelden".'
+            : "Registrierung fehlgeschlagen. Bitte erneut versuchen."}
+        </p>
+      )}
 
-      <button type="submit" className="registration-step__cta" disabled={!canSubmit || login.isPending}>
-        {login.isPending ? "Anmelden…" : "Mit ID Austria anmelden (Demo)"}
+      <button type="submit" className="registration-step__cta" disabled={!canSubmit || isPending}>
+        {isPending
+          ? mode === "login"
+            ? "Anmelden…"
+            : "Konto wird erstellt…"
+          : mode === "login"
+            ? "Mit ID Austria anmelden (Demo)"
+            : "Konto erstellen (Demo)"}
       </button>
     </form>
   );

@@ -1,5 +1,6 @@
 package com.medtrack.api;
 
+import com.medtrack.domain.PatientAlreadyExistsException;
 import com.medtrack.domain.PatientNotFoundException;
 import com.medtrack.domain.ReservationNotSupportedException;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ReservationNotSupportedException.class)
     public ResponseEntity<String> handleReservationNotSupported(ReservationNotSupportedException exception) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
+    }
+
+    @ExceptionHandler(PatientAlreadyExistsException.class)
+    public ResponseEntity<String> handlePatientAlreadyExists(PatientAlreadyExistsException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(exception.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

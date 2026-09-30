@@ -44,18 +44,29 @@
   color: var(--color-text-muted);
 }
 
-.pharmacy-card__status--open {
-  color: var(--color-success);
+.pharmacy-card__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
   font-weight: 600;
+}
+
+.pharmacy-card__status--open {
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 .pharmacy-card__status--oncall {
+  background: var(--color-primary-bg);
   color: var(--color-primary);
-  font-weight: 600;
 }
 
 .pharmacy-card__status--closed {
+  background: var(--color-bg);
   color: var(--color-text-muted);
+  font-weight: 500;
 }
 
 .pharmacy-card__chevron {

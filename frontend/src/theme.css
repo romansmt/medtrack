@@ -2,6 +2,7 @@
   --color-bg: #f7f5ee;
   --color-surface: #ffffff;
   --color-primary: #d9432c;
+  --color-primary-hover: #c23a25;
   --color-primary-contrast: #ffffff;
   --color-text: #1c1c1c;
   --color-text-muted: #6b6b6b;
@@ -9,8 +10,32 @@
   --color-success: #2f9e5c;
   --color-success-bg: #e4f4ea;
   --color-primary-bg: #fbe9e6;
+
+  /* Dark hero surface - distinct from the warm off-white page background, used to make the
+     homepage hero read as a deliberate "feature" panel rather than just more page content. */
+  --color-ink: #211a15;
+  --color-ink-contrast: #f7f2ea;
+
+  --radius-sm: 10px;
   --radius-card: 16px;
+  --radius-card-lg: 22px;
   --radius-pill: 999px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --shadow-sm: 0 1px 3px rgba(33, 26, 21, 0.06);
+  --shadow-md: 0 8px 24px rgba(33, 26, 21, 0.08);
+  --shadow-lg: 0 24px 48px rgba(33, 26, 21, 0.16);
+
+  /* Only used for hero-style headings - body copy stays on the system font for performance. */
+  --font-display: "Fraunces", Georgia, serif;
+
   --shell-max-width: 960px;
   --bottom-nav-height: 64px;
   --header-height: 68px;

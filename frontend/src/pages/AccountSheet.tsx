@@ -20,6 +20,7 @@ export function AccountSheet({
   onOpenAuth,
   onOpenAdminAccess,
   onDeactivateAdmin,
+  onOpenLogoutConfirm,
   onClose,
 }: {
   isRegistered: boolean;
@@ -28,6 +29,7 @@ export function AccountSheet({
   onOpenAuth: () => void;
   onOpenAdminAccess: () => void;
   onDeactivateAdmin: () => void;
+  onOpenLogoutConfirm: () => void;
   onClose: () => void;
 }) {
   const { selectedPatient } = usePatient();
@@ -81,6 +83,15 @@ export function AccountSheet({
         </span>
         {!isAdmin && <Icon name="chevron" size={16} />}
       </button>
+
+      {!isAdmin && isRegistered && (
+        <button type="button" className="account-sheet__link-row" onClick={onOpenLogoutConfirm}>
+          <span className="account-sheet__link-row-label">
+            <Icon name="logout" size={16} />
+            Abmelden
+          </span>
+        </button>
+      )}
 
       <div className="account-sheet__list">
         {PLACEHOLDER_ITEMS.map((item) => (

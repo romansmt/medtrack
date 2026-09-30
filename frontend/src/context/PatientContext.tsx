@@ -9,6 +9,7 @@ interface PatientContextValue {
   isLoading: boolean;
   error: unknown;
   selectPatient: (svnr: string) => void;
+  resetSelection: () => void;
 }
 
 const PatientContext = createContext<PatientContextValue | undefined>(undefined);
@@ -24,6 +25,14 @@ function readStoredSvnr(): string | null {
 function writeStoredSvnr(svnr: string) {
   try {
     localStorage.setItem(STORAGE_KEY, svnr);
+  } catch {
+    // ignore storage failures (e.g. private browsing)
+  }
+}
+
+function clearStoredSvnr() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
   } catch {
     // ignore storage failures (e.g. private browsing)
   }
@@ -52,13 +61,21 @@ export function PatientProvider({ children }: { children: ReactNode }) {
     writeStoredSvnr(svnr);
   };
 
+  // Used on logout (see App.tsx) to fully forget the current selection, not just clear the display -
+  // setting it to null lets the effect above re-default to patients[0] exactly like a first-ever
+  // visit, rather than silently staying on whoever was last viewed.
+  const resetSelection = () => {
+    setSelectedSvnr(null);
+    clearStoredSvnr();
+  };
+
   const selectedPatient = useMemo(
     () => patients.find((p) => p.svnr === selectedSvnr),
     [patients, selectedSvnr],
   );
 
   return (
-    <PatientContext.Provider value={{ patients, selectedPatient, isLoading, error, selectPatient }}>
+    <PatientContext.Provider value={{ patients, selectedPatient, isLoading, error, selectPatient, resetSelection }}>
       {children}
     </PatientContext.Provider>
   );

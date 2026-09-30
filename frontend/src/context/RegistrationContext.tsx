@@ -27,6 +27,7 @@ interface RegistrationContextValue {
   isRegistered: boolean;
   isLinked: boolean;
   completeRegistration: (linked: boolean) => void;
+  logout: () => void;
 }
 
 const RegistrationContext = createContext<RegistrationContextValue | undefined>(undefined);
@@ -48,8 +49,17 @@ export function RegistrationProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Full reset back to the pristine first-visit state - see LogoutConfirmModal, which is the only
+  // caller (after its double confirmation).
+  const logout = () => {
+    writeStored(REGISTERED_KEY, false);
+    writeStored(LINKED_KEY, false);
+    setIsRegistered(false);
+    setIsLinked(false);
+  };
+
   return (
-    <RegistrationContext.Provider value={{ isRegistered, isLinked, completeRegistration }}>
+    <RegistrationContext.Provider value={{ isRegistered, isLinked, completeRegistration, logout }}>
       {children}
     </RegistrationContext.Provider>
   );

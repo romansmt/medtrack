@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { AppShell } from "./layout/AppShell";
 import { useAdmin } from "./context/AdminContext";
 import { useConsent } from "./hooks/useConsent";
+import { usePatient } from "./context/PatientContext";
 import { useRegistration } from "./context/RegistrationContext";
 import { AccountSheet } from "./pages/AccountSheet";
 import { AdminAccessModal } from "./pages/AdminAccessModal";
@@ -10,6 +11,7 @@ import { AuthModal } from "./pages/AuthModal";
 import { ConsentPage } from "./pages/ConsentPage";
 import { FavoritesPage } from "./pages/FavoritesPage";
 import { HomePage } from "./pages/HomePage";
+import { LogoutConfirmModal } from "./pages/LogoutConfirmModal";
 import { MedicationPlanPage } from "./pages/MedicationPlanPage";
 import { PharmaciesPage } from "./pages/PharmaciesPage";
 import { PrescriptionsPage } from "./pages/PrescriptionsPage";
@@ -19,13 +21,15 @@ import { SearchPage } from "./pages/SearchPage";
 
 export function App() {
   const { hasConsented, giveConsent } = useConsent();
-  const { isRegistered, isLinked, completeRegistration } = useRegistration();
+  const { isRegistered, isLinked, completeRegistration, logout } = useRegistration();
   const { isAdmin, setIsAdmin } = useAdmin();
-  // All three start closed - none is ever forced open. Reached only via the header's account
+  const { resetSelection } = usePatient();
+  // All four start closed - none is ever forced open. Reached only via the header's account
   // button, the "not linked" banner, or a deliberate tap inside the account sheet.
   const [accountSheetOpen, setAccountSheetOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [adminAccessModalOpen, setAdminAccessModalOpen] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
   if (!hasConsented) {
     return <ConsentPage onAccept={giveConsent} />;
@@ -69,6 +73,10 @@ export function App() {
             setAdminAccessModalOpen(true);
           }}
           onDeactivateAdmin={() => setIsAdmin(false)}
+          onOpenLogoutConfirm={() => {
+            setAccountSheetOpen(false);
+            setLogoutConfirmOpen(true);
+          }}
           onClose={() => setAccountSheetOpen(false)}
         />
       )}
@@ -90,6 +98,21 @@ export function App() {
             setAdminAccessModalOpen(false);
           }}
           onCancel={() => setAdminAccessModalOpen(false)}
+        />
+      )}
+
+      {logoutConfirmOpen && (
+        <LogoutConfirmModal
+          onConfirm={() => {
+            // Full reset back to the pristine first-visit state: no registered/linked identity, no
+            // admin mode, and no lingering "last viewed" patient - a fresh guest, not just a
+            // relabeled one.
+            logout();
+            setIsAdmin(false);
+            resetSelection();
+            setLogoutConfirmOpen(false);
+          }}
+          onCancel={() => setLogoutConfirmOpen(false)}
         />
       )}
     </>

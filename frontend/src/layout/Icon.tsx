@@ -14,7 +14,8 @@ export type IconName =
   | "feedback"
   | "info"
   | "help"
-  | "chevron";
+  | "chevron"
+  | "logout";
 
 const paths: Record<IconName, string> = {
   home: "M3 11.5 12 4l9 7.5M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9",
@@ -33,6 +34,7 @@ const paths: Record<IconName, string> = {
   info: "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18Z M12 11v6M12 7.5v.01",
   help: "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18Z M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 1.8-2.5 3.5M12 17v.01",
   chevron: "M9 6l6 6-6 6",
+  logout: "M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M16 15l4-4-4-4M20 11H9",
 };
 
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {

@@ -339,15 +339,15 @@ $env:PGPASSWORD = "medtrack"
 ```
 Expect: the 3 seeded rows (07-25 TAKEN, 07-26 SKIPPED, 07-27 TAKEN) plus whatever you confirmed above for today.
 
-### 4.8 Verifying the registration flow (Phase 2G — mock ID Austria + e-card, plus standard email/password)
+### 4.8 Verifying the registration flow (Phase 2G — mock ID Austria + e-card, hardened with real registry verification and credential-based login)
 
 Unlike 4.4–4.7, this feature has a real frontend UI built around it, not just a REST API — the table below is primarily for driving that UI by hand, with the equivalent raw API calls underneath for backend-only checks.
 
-The UI lives in `frontend/src/pages/AuthModal.tsx` (the Anmelden/Registrieren overlay) and `frontend/src/pages/AccountSheet.tsx` (the "Mein Konto" account menu, reachable from the header's account icon). Neither is ever forced open on load — App.tsx opens them only from a deliberate action: the header's account button, the "not linked" banner's "ID Austria verknüpfen" button, or the "Anmelden" row inside Mein Konto. There are two independent, orthogonal choices inside the modal: **Anmelden vs. Registrieren** (outer tabs), and **Mit ID Austria vs. Standard** (inner tabs, `frontend/src/pages/registration/AuthEntryStep.tsx`):
-- **Mit ID Austria** is exactly the flow described below — name + birthdate, then an e-card scan/confirm step, always ends up `isLinked: true`.
-- **Standard** is a plain email/password form (matching a conventional signup, no e-card involved) — registration additionally asks Vorname/Nachname/Geburtsdatum/Telefonnummer/AGB; login only asks email/password. It skips the scan/confirm step entirely and always ends up `isLinked: false`. A Standard account can be upgraded later by going through "Mit ID Austria" with the same name/birthdate (see `POST /api/registration/standard-login` and `CreateAccountRequest.email` on the backend). **The password is never sent to the backend or checked anywhere** — same "mock, nothing to reject against" spirit as the ID Austria login — so standard login succeeds for any password once the email is registered.
+**Registration is only possible through ID Austria — there is no standalone email/password signup.** The UI lives in `frontend/src/pages/AuthModal.tsx` (the Anmelden/Registrieren overlay) and `frontend/src/pages/AccountSheet.tsx` (the "Mein Konto" account menu, reachable from the header's account icon). Neither is ever forced open on load — App.tsx opens them only from a deliberate action: the header's account button, the "not linked" banner's "ID Austria verknüpfen" button, or the "Anmelden" row inside Mein Konto. Inside the modal:
+- **Registrieren** only offers "Mit ID Austria" (the inner method toggle is hidden — there is no choice to make): name + birthdate → e-card scan/confirm, where the submitted SVNR + 6 other fields are compared against the (mock) **ID-Austria registry** (`id_austria_registry` table, migration `V11__id_austria_registry.sql`, only ever read by `MockIdAustriaAuthAdapter`/`MockEHealthCardAdapter` — simulating that MedTrack has no direct access to ID Austria's own data). A wrong SVNR or any other mismatched field (name, birthdate, card serial, carrier number, insurer, expiry) is rejected with a specific message naming what's wrong, not silently accepted. Only once every field matches does the wizard move to a final **"Konto abschließen"** step, where you set the email + password that becomes this account's Standard-login credential (`POST /api/registration/complete-registration`). Attempting to register an identity that already has an account (a `Patient` row with `password_hash` set) is rejected with a 409 "already exists" alert.
+- **Anmelden** offers both **Mit ID Austria** (same registry verification; if the identity already has an account it logs straight in via `POST /api/registration/login-with-id-austria`, no password needed — if not, it tells you to register first) and **Standard**: Vorname, Nachname, E-Mail, Passwort, checked for real against the account created during registration (`POST /api/registration/standard-login`, BCrypt-hashed `patient.password_hash`). Unknown email → 404 "no such user"; known email but wrong name/password → 401 generic "wrong credentials" (deliberately not field-specific, unlike registration).
 
-**Demo login/e-card data for all four seeded patients.** Every field a real e-card would carry back, precomputed from what's already in `V2__seed_demo_data.sql` so nothing here needs the app running to look up — use these to log in via "Mit ID Austria anmelden (Demo)" and to fill in (or cross-check) the e-card scan/confirm screen:
+**Demo data for all four seeded patients.** The ID-Austria registry holds every field a real e-card would carry back, seeded verbatim by `V11__id_austria_registry.sql` (not computed on the fly anymore):
 
 | Patient | MedTrack-ID | SVNR | Vorname | Nachname | Geburtsdatum | Kennnummer der Karte | Kennnummer des Trägers | Versicherung | Ablaufdatum |
 |---|---|---|---|---|---|---|---|---|---|
@@ -356,62 +356,53 @@ The UI lives in `frontend/src/pages/AuthModal.tsx` (the Anmelden/Registrieren ov
 | Lena Hofer | `MT-10000003` | `3456030380` | Lena | Hofer | 03/03/1980 | `34560303800830306543` | `4711` | ÖGK | 31/12/2031 |
 | Paul Wagner | `MT-10000004` | `4567040475` | Paul | Wagner | 04/04/1975 | `45670404755740407654` | `4711` | ÖGK | 31/12/2031 |
 
-Where each column comes from:
-- **MedTrack-ID** is a real, persisted column (`patient.medtrack_id`, migration `V9__add_patient_medtrack_id.sql`, unique + not-null) - MedTrack's own account/customer number, deliberately distinct from the government-issued SVNR next to it (the same way a real insurer's "Kundennummer" differs from your SVNR). It's the one field in this table that's genuinely stored, not computed on request. `GET /api/patients` and the scan-card response both return it as `medtrackId`.
-- **SVNR** is the real seeded value. Its own last 6 digits *are* the Geburtsdatum column, encoded `ddMMyy` (Austria's real SVNR format) — e.g. Anna's `1234010190` → `010190` → 01/01/1990. This is exactly the pair the registration flow's consistency check compares against what you typed at login.
-- **Kennnummer der Karte**, **Kennnummer des Trägers**, **Versicherung**, **Ablaufdatum** are all computed on request in `MockEHealthCardAdapter.java`, not stored - see that file's comments for exactly how (card number = SVNR + its own reverse; carrier number/name fixed, this demo only models one insurer; expiry = `today + 5 years, forced to 31 December`, so it moves forward every year - the value above is only correct as of when this doc was last touched).
-- The registration flow shows MedTrack-ID as a read-only field alongside these; if you reach the confirm screen via "Werte manuell eingeben" (skipping the photo) rather than a scan, it shows *"(wird nach Bestätigung zugewiesen)"* instead, since it isn't resolved until the SVNR you type is confirmed - the real value then appears immediately on the Home page and in the header once you land in the app.
+Three of the four (Anna, Max, Lena — **not Paul**) are also **pre-registered example accounts**: `DemoAccountSeeder` (an idempotent `ApplicationRunner`) fills in a demo email + password for them at startup, so Standard login works immediately without registering first. See `docs/TEST_CREDENTIALS.md` for the exact emails/password. Paul Wagner is deliberately left without credentials — he's the one seeded identity meant for manually walking through the full registration flow (verify → set credentials).
 
-Golden path — log in as Anna Gruber, scan/confirm, land in the app as her:
-1. Click the account icon in the header (or, if a "not linked" banner is showing, its "ID Austria verknüpfen" button) to open the overlay. Make sure "Anmelden" and "Mit ID Austria" are selected (both are the default).
-2. Enter Vorname `Anna`, Nachname `Gruber`, Geburtsdatum `01/01/1990`, submit.
-3. On the e-card step, either pick any image file (content is never inspected) or use "Kein Foto zur Hand? Werte stattdessen manuell eingeben" and type the rest of Anna's row above into the confirm form.
-4. Confirm. Expect: lands on the Home dashboard, header shows "Anna Gruber", no "not linked" banner.
+Golden path — register Paul Wagner (the one seeded identity without credentials yet):
+1. Click the account icon in the header to open the overlay, switch to "Registrieren" (only "Mit ID Austria" is offered).
+2. Enter Vorname `Paul`, Nachname `Wagner`, Geburtsdatum `04/04/1975`, submit.
+3. On the e-card step, use "Kein Foto zur Hand? Werte stattdessen manuell eingeben" and type the rest of Paul's row above into the confirm form exactly.
+4. Confirm. Expect: no error, advances to "Konto abschließen" — set an email + password.
+5. Submit. Expect: lands on the Home dashboard, header shows "Paul Wagner", no "not linked" banner.
 
-Standard path — register a plain (non-ID-Austria) account and confirm it's *not* linked yet:
-1. Open the overlay, switch to "Registrieren" + "Standard".
-2. Fill in a new name/birthdate/email/phone/password (+ confirm) and accept the checkbox, submit.
-3. Expect: lands in the app immediately (no scan/confirm step), header shows the new name and a fresh `MT-...` id, and the "not linked" banner **is** showing - Standard registration never sets `isLinked`.
-4. To upgrade it: open the overlay again via that banner, use "Mit ID Austria" with the *same* name/birthdate, then scan/enter-manually and confirm as above. Expect: banner disappears, same MedTrack-ID is kept (looked up by name, not reissued).
+Standard login path — log in as Anna Gruber with her pre-seeded demo credentials (see `docs/TEST_CREDENTIALS.md`):
+1. Open the overlay, "Anmelden" + "Standard".
+2. Enter Vorname `Anna`, Nachname `Gruber`, her demo E-Mail and Passwort, submit.
+3. Expect: lands in the app as Anna, header shows "Anna Gruber" — the "not linked" banner **is** showing, since Standard login never sets `isLinked`.
 
-Deliberate error case - same table proves the mismatch check works:
-1. Log in with Vorname `Anna`, Nachname `Gruber`, but Geburtsdatum `02/02/1985` (Max's birthdate, not Anna's).
-2. Scan/enter Anna's e-card data (her real SVNR `1234010190`) as normal.
-3. Confirm. Expect: rejected with *"Das in der SVNR enthaltene Geburtsdatum stimmt nicht mit dem bei der ID-Austria-Anmeldung angegebenen Geburtsdatum überein."* - not silently accepted.
+Deliberate error cases:
+1. **Wrong SVNR during registration**: on the confirm step, use an SVNR that isn't any seeded patient's (but still encodes the asserted birthdate, so the client-side check doesn't intercept it first — e.g. `9999040475` for a `04/04/1975` birthdate). Expect: *"Es wurde keine ID-Austria-Identität mit der SVNR ... gefunden. Bitte überprüfen Sie die SVNR."*
+2. **Field mismatch during registration**: use Anna's real SVNR `1234010190` but type a wrong Nachname or Ablaufdatum. Expect: *"Folgende Angaben stimmen nicht mit dem ID-Austria-Register überein: Nachname, Ablaufdatum"* (or whichever fields you changed) — every mismatch is listed, not just the first.
+3. **Already registered**: try to register Anna Gruber's real data again (she already has an account). Expect: *"Für diese Identität existiert bereits ein MedTrack-Konto. Bitte melden Sie sich stattdessen an."*
+4. **Wrong Standard-login password**: Anna's name/email with any password other than her demo one. Expect: *"Die eingegebenen Daten stimmen nicht mit dem gespeicherten Konto überein."*
+5. **Unknown Standard-login email**: any name/email/password combination for an email nobody registered. Expect: *"Kein Konto mit dieser E-Mail gefunden..."*
 
 Raw API equivalents, if you want to check the backend alone without the UI:
 ```powershell
 $body = @{ fullName = "Anna Gruber"; dateOfBirth = "1990-01-01" } | ConvertTo-Json
 Invoke-WebRequest -Uri "http://localhost:8080/api/registration/id-austria-login" -Method POST -Body $body -ContentType "application/json" | Select-Object -ExpandProperty Content
 ```
-Expect: `200`, echoes back the same name/birthdate plus a fresh `authenticatedAt` - this step always succeeds, it's a mock with nothing to reject against.
+Expect: `200`, echoes back the same name/birthdate plus a fresh `authenticatedAt` - this step always succeeds, it's just the wizard's entry point; the real check is verify-identity below.
 
 ```powershell
-$body = @{ fullName = "Anna Gruber" } | ConvertTo-Json
-Invoke-WebRequest -Uri "http://localhost:8080/api/registration/scan-card" -Method POST -Body $body -ContentType "application/json" | Select-Object -ExpandProperty Content
-
-$body = @{ fullName = "Nobody Here" } | ConvertTo-Json
-try { Invoke-WebRequest -Uri "http://localhost:8080/api/registration/scan-card" -Method POST -Body $body -ContentType "application/json" } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
+$body = @{ svnr = "1234010190"; firstName = "Anna"; lastName = "Gruber"; dateOfBirth = "1990-01-01"; cardSerialNumber = "12340101900910104321"; carrierNumber = "4711"; carrierName = "ÖGK"; expiryDate = "2031-12-31" } | ConvertTo-Json
+Invoke-WebRequest -Uri "http://localhost:8080/api/registration/verify-identity" -Method POST -Body $body -ContentType "application/json; charset=utf-8" | Select-Object -ExpandProperty Content
 ```
-Expect: the first call returns Anna's full row from the table above as JSON; the second returns `STATUS=404` - only the four seeded names have a card to "scan."
+Expect: `200`, `{"verified": {...}, "alreadyRegistered": true}` for Anna (already has a demo account).
+
+```powershell
+$body = @{ firstName = "Anna"; lastName = "Gruber"; email = "anna.gruber@demo.medtrack.local"; password = "MedTrack2026!" } | ConvertTo-Json
+Invoke-WebRequest -Uri "http://localhost:8080/api/registration/standard-login" -Method POST -Body $body -ContentType "application/json" | Select-Object -ExpandProperty Content
+
+$body = @{ firstName = "Anna"; lastName = "Gruber"; email = "anna.gruber@demo.medtrack.local"; password = "wrong" } | ConvertTo-Json
+try { Invoke-WebRequest -Uri "http://localhost:8080/api/registration/standard-login" -Method POST -Body $body -ContentType "application/json" } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
+```
+Expect: the first returns Anna's `AccountResponse`; the second returns `STATUS=401` (see `docs/TEST_CREDENTIALS.md` if this password has changed).
 
 ```powershell
 Invoke-WebRequest "http://localhost:8080/api/patients" | Select-Object -ExpandProperty Content
 ```
-Expect: all four patients, each with a `medtrackId` matching the table above - confirms it's a real stored column (migration `V9`), not something only the registration endpoints know about.
-
-Standard (non-ID-Austria) register + login, raw API:
-```powershell
-$body = @{ fullName = "Demo Standard"; dateOfBirth = "1992-06-15"; email = "demo.standard@example.test" } | ConvertTo-Json
-Invoke-WebRequest -Uri "http://localhost:8080/api/registration/create-account" -Method POST -Body $body -ContentType "application/json" | Select-Object -ExpandProperty Content
-
-$body = @{ email = "demo.standard@example.test" } | ConvertTo-Json
-Invoke-WebRequest -Uri "http://localhost:8080/api/registration/standard-login" -Method POST -Body $body -ContentType "application/json" | Select-Object -ExpandProperty Content
-
-$body = @{ email = "nobody@example.test" } | ConvertTo-Json
-try { Invoke-WebRequest -Uri "http://localhost:8080/api/registration/standard-login" -Method POST -Body $body -ContentType "application/json" } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
-```
-Expect: `create-account` returns a full `ECardDetailsResponse` (SVNR/card fields included, even though the Standard UI never shows them); `standard-login` with the registered email returns the same record; the unknown email returns `STATUS=404`. Note there's no password field in either request - see the note above about why.
+Expect: all patients including the four seeded ones, each with a `medtrackId` matching the table above — `patient` rows are untouched by this feature; only their `email`/`password_hash` are new.
 
 ### 4.9 Admin mode (patient switcher access)
 

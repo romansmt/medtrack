@@ -1,32 +1,39 @@
 package com.medtrack.infrastructure.ehealthcard;
 
 import com.medtrack.application.port.EHealthCardPort;
+import com.medtrack.domain.AccountAlreadyRegisteredException;
 import com.medtrack.domain.ECardDetails;
 import com.medtrack.domain.EHealthCardSession;
+import com.medtrack.domain.IdAustriaRecord;
+import com.medtrack.domain.IdAustriaRecordNotFoundException;
+import com.medtrack.domain.InvalidCredentialsException;
 import com.medtrack.domain.Patient;
-import com.medtrack.domain.PatientAlreadyExistsException;
-import com.medtrack.domain.PatientEmailAlreadyExistsException;
 import com.medtrack.domain.PatientNotFoundException;
+import com.medtrack.infrastructure.idaustria.IdAustriaRegistryRepository;
 import com.medtrack.infrastructure.persistence.PatientRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.NoSuchElementException;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Optional;
 
 @Component
 public class MockEHealthCardAdapter implements EHealthCardPort {
 
-    // Fictional 4-digit carrier ("Kennnummer des Traegers") code - not a real OEGK identifier.
-    private static final String CARRIER_NUMBER = "4711";
-    private static final String CARRIER_NAME = "ÖGK";
     private static final int MEDTRACK_ID_SEED = 10_000_000;
 
     private final PatientRepository patientRepository;
+    private final IdAustriaRegistryRepository registryRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public MockEHealthCardAdapter(PatientRepository patientRepository) {
+    public MockEHealthCardAdapter(
+            PatientRepository patientRepository,
+            IdAustriaRegistryRepository registryRepository,
+            PasswordEncoder passwordEncoder) {
         this.patientRepository = patientRepository;
+        this.registryRepository = registryRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -37,89 +44,79 @@ public class MockEHealthCardAdapter implements EHealthCardPort {
     }
 
     @Override
+    public Optional<Patient> findBySvnr(String svnr) {
+        return patientRepository.findBySvnr(svnr);
+    }
+
+    @Override
     public ECardDetails scanCard(String fullName) {
-        Patient patient = patientRepository.findByNameIgnoreCase(fullName)
-                .orElseThrow(() -> new NoSuchElementException("No demo patient found matching name " + fullName));
-        return toECardDetails(patient);
-    }
-
-    @Override
-    public ECardDetails issueNewCard(String fullName, LocalDate dateOfBirth, String email) {
-        if (patientRepository.findByNameIgnoreCase(fullName).isPresent()) {
-            throw new PatientAlreadyExistsException(fullName);
-        }
-        if (email != null && patientRepository.findByEmailIgnoreCase(email).isPresent()) {
-            throw new PatientEmailAlreadyExistsException(email);
-        }
-
-        Patient patient = new Patient(generateUniqueSvnr(dateOfBirth), fullName, generateNextMedtrackId());
-        patient.setEmail(email);
-        return toECardDetails(patientRepository.save(patient));
-    }
-
-    @Override
-    public ECardDetails loginByEmail(String email) {
-        Patient patient = patientRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new NoSuchElementException("No account found for email " + email));
-        return toECardDetails(patient);
-    }
-
-    private ECardDetails toECardDetails(Patient patient) {
-        String svnr = patient.getSvnr();
-        String[] nameParts = patient.getName().split(" ", 2);
+        String[] nameParts = fullName.trim().split("\\s+", 2);
         String firstName = nameParts[0];
         String lastName = nameParts.length > 1 ? nameParts[1] : "";
 
+        IdAustriaRecord record = registryRepository.findByFirstNameIgnoreCaseAndLastNameIgnoreCase(firstName, lastName)
+                .orElseThrow(() -> new NoSuchElementException("No ID-Austria identity found matching name " + fullName));
+        return toECardDetails(record);
+    }
+
+    @Override
+    public Patient completeRegistration(String svnr, String email, String password) {
+        IdAustriaRecord record = registryRepository.findBySvnr(svnr)
+                .orElseThrow(() -> new IdAustriaRecordNotFoundException(svnr));
+
+        Patient patient = patientRepository.findBySvnr(svnr).orElseGet(() -> {
+            String fullName = record.getFirstName() + " " + record.getLastName();
+            return new Patient(svnr, fullName, generateNextMedtrackId());
+        });
+
+        if (patient.hasAccount()) {
+            throw new AccountAlreadyRegisteredException(svnr);
+        }
+
+        patient.setEmail(email);
+        patient.setPasswordHash(passwordEncoder.encode(password));
+        return patientRepository.save(patient);
+    }
+
+    @Override
+    public Patient loginWithIdAustria(String svnr) {
+        registryRepository.findBySvnr(svnr)
+                .orElseThrow(() -> new IdAustriaRecordNotFoundException(svnr));
+
+        Patient patient = patientRepository.findBySvnr(svnr)
+                .orElseThrow(() -> new NoSuchElementException("No MedTrack account registered yet for SVNR " + svnr));
+        if (!patient.hasAccount()) {
+            throw new NoSuchElementException("No MedTrack account registered yet for SVNR " + svnr);
+        }
+        return patient;
+    }
+
+    @Override
+    public Patient loginWithCredentials(String firstName, String lastName, String email, String rawPassword) {
+        Patient patient = patientRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new NoSuchElementException("No account found for email " + email));
+
+        String[] nameParts = patient.getName().split(" ", 2);
+        boolean nameMatches = nameParts[0].equalsIgnoreCase(firstName.trim())
+                && (nameParts.length > 1 ? nameParts[1] : "").equalsIgnoreCase(lastName.trim());
+
+        if (!nameMatches || !passwordEncoder.matches(rawPassword, patient.getPasswordHash())) {
+            throw new InvalidCredentialsException();
+        }
+        return patient;
+    }
+
+    private static ECardDetails toECardDetails(IdAustriaRecord record) {
         return new ECardDetails(
-                svnr,
-                patient.getMedtrackId(),
-                firstName,
-                lastName,
-                dateOfBirthFromSvnr(svnr),
-                cardSerialNumberFor(svnr),
-                CARRIER_NUMBER,
-                CARRIER_NAME,
-                LocalDate.now().plusYears(5).withMonth(12).withDayOfMonth(31));
-    }
-
-    // The last 6 digits of an Austrian SVNR are the holder's birthdate as ddMMyy - decode it the
-    // same way the seed data (V2__seed_demo_data.sql) was constructed.
-    private static LocalDate dateOfBirthFromSvnr(String svnr) {
-        String ddmmyy = svnr.substring(4);
-        int day = Integer.parseInt(ddmmyy.substring(0, 2));
-        int month = Integer.parseInt(ddmmyy.substring(2, 4));
-        int twoDigitYear = Integer.parseInt(ddmmyy.substring(4, 6));
-
-        int currentYear = LocalDate.now().getYear();
-        int fullYear = 2000 + twoDigitYear;
-        if (fullYear > currentYear) {
-            fullYear -= 100;
-        }
-
-        return LocalDate.of(fullYear, month, day);
-    }
-
-    // Deterministic 20-digit "Kennnummer der Karte" - not a real card number, just stable per svnr
-    // so re-scanning the same demo patient's card always shows the same value.
-    private static String cardSerialNumberFor(String svnr) {
-        return svnr + new StringBuilder(svnr).reverse();
-    }
-
-    // A fresh SVNR for a newly registered patient: a random 4-digit sequence number, followed by
-    // the given birthdate encoded ddMMyy - the same structure every other SVNR in this project
-    // already has, so the birthdate-consistency check works identically for new accounts too.
-    private String generateUniqueSvnr(LocalDate dateOfBirth) {
-        String ddmmyy = String.format("%02d%02d%02d", dateOfBirth.getDayOfMonth(), dateOfBirth.getMonthValue(),
-                dateOfBirth.getYear() % 100);
-
-        for (int attempt = 0; attempt < 50; attempt++) {
-            String sequence = String.format("%04d", ThreadLocalRandom.current().nextInt(1000, 10000));
-            String candidate = sequence + ddmmyy;
-            if (patientRepository.findBySvnr(candidate).isEmpty()) {
-                return candidate;
-            }
-        }
-        throw new IllegalStateException("Could not generate a unique SVNR after 50 attempts");
+                record.getSvnr(),
+                null,
+                record.getFirstName(),
+                record.getLastName(),
+                record.getDateOfBirth(),
+                record.getCardSerialNumber(),
+                record.getCarrierNumber(),
+                record.getInsurerName(),
+                record.getExpiryDate());
     }
 
     // MedTrack-IDs are "MT-" + an 8-digit sequence, starting at 10000001 (see V9 seed values) -

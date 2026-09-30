@@ -1,11 +1,18 @@
 package com.medtrack.application.service;
 
+import com.medtrack.application.dto.AccountResponse;
+import com.medtrack.application.dto.CompleteRegistrationRequest;
 import com.medtrack.application.dto.ECardDetailsResponse;
 import com.medtrack.application.dto.IdAustriaLoginResponse;
+import com.medtrack.application.dto.StandardLoginRequest;
+import com.medtrack.application.dto.VerifyIdentityRequest;
+import com.medtrack.application.dto.VerifyIdentityResponse;
 import com.medtrack.application.port.EHealthCardPort;
 import com.medtrack.application.port.IdAustriaAuthPort;
 import com.medtrack.domain.ECardDetails;
 import com.medtrack.domain.IdAustriaIdentity;
+import com.medtrack.domain.IdAustriaRecord;
+import com.medtrack.domain.Patient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,25 +36,56 @@ public class RegistrationService {
 
     @Transactional(readOnly = true)
     public ECardDetailsResponse scanCard(String fullName) {
-        return toResponse(eHealthCardPort.scanCard(fullName));
+        return toResponse(eHealthCardPort.scanCard(fullName), null);
     }
 
-    // Unlike scanCard/loginWithIdAustria, this writes a new Patient row - not read-only. email is
-    // null for the ID-Austria registration path, populated for the standard registration path.
+    // The real "call out to ID Austria and compare" step. Read-only - it never writes an account,
+    // just tells the caller whether one already exists for this identity.
+    @Transactional(readOnly = true)
+    public VerifyIdentityResponse verifyIdentity(VerifyIdentityRequest request) {
+        ECardDetails submitted = new ECardDetails(
+                request.svnr(),
+                null,
+                request.firstName(),
+                request.lastName(),
+                request.dateOfBirth(),
+                request.cardSerialNumber(),
+                request.carrierNumber(),
+                request.carrierName(),
+                request.expiryDate());
+
+        IdAustriaRecord verified = idAustriaAuthPort.verifyFullIdentity(submitted);
+        Patient existing = eHealthCardPort.findBySvnr(verified.getSvnr()).orElse(null);
+
+        String medtrackId = existing != null ? existing.getMedtrackId() : null;
+        boolean alreadyRegistered = existing != null && existing.hasAccount();
+        return new VerifyIdentityResponse(toResponse(verified, medtrackId), alreadyRegistered);
+    }
+
+    // Only reachable after a successful verifyIdentity - re-verifies the svnr server-side rather than
+    // trusting the client's earlier call, then sets email+password on the (found-or-created) patient.
     @Transactional
-    public ECardDetailsResponse createAccount(String fullName, LocalDate dateOfBirth, String email) {
-        return toResponse(eHealthCardPort.issueNewCard(fullName, dateOfBirth, email));
+    public AccountResponse completeRegistration(CompleteRegistrationRequest request) {
+        Patient patient = eHealthCardPort.completeRegistration(request.svnr(), request.email(), request.password());
+        return toAccountResponse(patient);
     }
 
     @Transactional(readOnly = true)
-    public ECardDetailsResponse loginStandard(String email) {
-        return toResponse(eHealthCardPort.loginByEmail(email));
+    public AccountResponse loginWithIdAustria(String svnr) {
+        return toAccountResponse(eHealthCardPort.loginWithIdAustria(svnr));
     }
 
-    private static ECardDetailsResponse toResponse(ECardDetails details) {
+    @Transactional(readOnly = true)
+    public AccountResponse loginStandard(StandardLoginRequest request) {
+        Patient patient = eHealthCardPort.loginWithCredentials(
+                request.firstName(), request.lastName(), request.email(), request.password());
+        return toAccountResponse(patient);
+    }
+
+    private static ECardDetailsResponse toResponse(ECardDetails details, String medtrackId) {
         return new ECardDetailsResponse(
                 details.svnr(),
-                details.medtrackId(),
+                medtrackId != null ? medtrackId : details.medtrackId(),
                 details.firstName(),
                 details.lastName(),
                 details.dateOfBirth(),
@@ -55,5 +93,22 @@ public class RegistrationService {
                 details.carrierNumber(),
                 details.carrierName(),
                 details.expiryDate());
+    }
+
+    private static ECardDetailsResponse toResponse(IdAustriaRecord record, String medtrackId) {
+        return new ECardDetailsResponse(
+                record.getSvnr(),
+                medtrackId,
+                record.getFirstName(),
+                record.getLastName(),
+                record.getDateOfBirth(),
+                record.getCardSerialNumber(),
+                record.getCarrierNumber(),
+                record.getInsurerName(),
+                record.getExpiryDate());
+    }
+
+    private static AccountResponse toAccountResponse(Patient patient) {
+        return new AccountResponse(patient.getSvnr(), patient.getMedtrackId(), patient.getName(), patient.getEmail());
     }
 }

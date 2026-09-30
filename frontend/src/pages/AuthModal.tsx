@@ -2,11 +2,12 @@ import { useState } from "react";
 import type { ECardDetails } from "../api/registration";
 import { usePatient } from "../context/PatientContext";
 import { ConfirmCardDataStep } from "./registration/ConfirmCardDataStep";
+import { CreateCredentialsStep } from "./registration/CreateCredentialsStep";
 import { ECardScanStep } from "./registration/ECardScanStep";
 import { AuthEntryStep, type IdAustriaLoginResult } from "./registration/AuthEntryStep";
 import "./AuthModal.css";
 
-type Step = "start" | "scan" | "confirm";
+type Step = "start" | "scan" | "confirm" | "credentials";
 
 // The Anmelden/Registrieren overlay. Opened deliberately from the header's account button or the
 // "not linked" banner (see App.tsx) - never forced open. Sits on top of the app, not in place of it:
@@ -16,9 +17,11 @@ export function AuthModal({ onSuccess, onCancel }: { onSuccess: (linked: boolean
   const [step, setStep] = useState<Step>("start");
   const [identity, setIdentity] = useState<IdAustriaLoginResult | null>(null);
   const [cardDetails, setCardDetails] = useState<ECardDetails | null>(null);
-  // "register" skips the scan step entirely (a freshly created account has nothing to photograph),
-  // so confirm's "Zurück" needs to know which step to return to - "start", not "scan".
+  // Registration always goes through scan -> confirm -> credentials; login stops at confirm (either
+  // logging straight in or telling the user to register first). "Zurück" on confirm needs to know
+  // which step to return to.
   const [cameFromRegister, setCameFromRegister] = useState(false);
+  const [verifiedSvnr, setVerifiedSvnr] = useState<string | null>(null);
 
   return (
     <div className="auth-modal-backdrop">
@@ -30,26 +33,20 @@ export function AuthModal({ onSuccess, onCancel }: { onSuccess: (linked: boolean
           </button>
         </div>
         <div className="auth-modal__dots">
-          {(["start", "scan", "confirm"] as Step[]).map((s) => (
+          {(["start", "scan", "confirm", "credentials"] as Step[]).map((s) => (
             <span key={s} className={"auth-modal__dot" + (s === step ? " is-active" : "")} />
           ))}
         </div>
 
         {step === "start" && (
           <AuthEntryStep
-            onIdAustriaLoginSuccess={(result) => {
+            onIdAustriaSuccess={(result, isRegister) => {
               setIdentity(result);
-              setCameFromRegister(false);
+              setCameFromRegister(isRegister);
               setStep("scan");
             }}
-            onIdAustriaAccountCreated={(details) => {
-              setIdentity({ fullName: `${details.firstName} ${details.lastName}`, dateOfBirth: details.dateOfBirth });
-              setCardDetails(details);
-              setCameFromRegister(true);
-              setStep("confirm");
-            }}
-            onStandardAuthSuccess={(details) => {
-              selectPatient(details.svnr);
+            onStandardLoginSuccess={(svnr) => {
+              selectPatient(svnr);
               onSuccess(false);
             }}
           />
@@ -67,7 +64,7 @@ export function AuthModal({ onSuccess, onCancel }: { onSuccess: (linked: boolean
               const [firstName, ...rest] = identity.fullName.split(" ");
               setCardDetails({
                 svnr: "",
-                medtrackId: "",
+                medtrackId: null,
                 firstName: firstName ?? "",
                 lastName: rest.join(" "),
                 dateOfBirth: identity.dateOfBirth,
@@ -85,8 +82,24 @@ export function AuthModal({ onSuccess, onCancel }: { onSuccess: (linked: boolean
           <ConfirmCardDataStep
             details={cardDetails}
             registeredDateOfBirth={identity.dateOfBirth}
+            intent={cameFromRegister ? "register" : "login"}
             onBack={() => setStep(cameFromRegister ? "start" : "scan")}
-            onConfirm={(svnr) => {
+            onVerifiedForRegistration={(svnr) => {
+              setVerifiedSvnr(svnr);
+              setStep("credentials");
+            }}
+            onLoginSuccess={(svnr) => {
+              selectPatient(svnr);
+              onSuccess(true);
+            }}
+          />
+        )}
+
+        {step === "credentials" && verifiedSvnr && (
+          <CreateCredentialsStep
+            svnr={verifiedSvnr}
+            onBack={() => setStep("confirm")}
+            onSuccess={(svnr) => {
               selectPatient(svnr);
               onSuccess(true);
             }}

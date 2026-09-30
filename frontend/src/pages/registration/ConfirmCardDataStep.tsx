@@ -1,10 +1,16 @@
 import { useState } from "react";
-import type { ECardDetails } from "../../api/registration";
+import { ApiError } from "../../api/client";
+import {
+  useLoginWithIdAustriaMutation,
+  useVerifyIdentityMutation,
+  type ECardDetails,
+} from "../../api/registration";
 import { Icon } from "../../layout/Icon";
 
-// Mirrors MockEHealthCardAdapter.dateOfBirthFromSvnr on the backend - re-derives the birthdate
-// from whatever SVNR is currently in the form (not just the scan's original value), so editing the
-// SVNR field is itself covered by the consistency check.
+// Mirrors MockIdAustriaAuthAdapter's SVNR decoding - re-derives the birthdate from whatever SVNR is
+// currently in the form (not just the scan's original value), so editing the SVNR field is itself
+// covered by this fast client-side check. It's only a shape/self-consistency check though - the
+// authoritative comparison against the ID-Austria registry happens server-side in verify-identity.
 function birthDateFromSvnr(svnr: string): string | null {
   if (!/^\d{10}$/.test(svnr)) return null;
   const day = svnr.slice(4, 6);
@@ -19,13 +25,17 @@ function birthDateFromSvnr(svnr: string): string | null {
 export function ConfirmCardDataStep({
   details,
   registeredDateOfBirth,
+  intent,
   onBack,
-  onConfirm,
+  onVerifiedForRegistration,
+  onLoginSuccess,
 }: {
   details: ECardDetails;
   registeredDateOfBirth: string;
+  intent: "login" | "register";
   onBack: () => void;
-  onConfirm: (svnr: string) => void;
+  onVerifiedForRegistration: (svnr: string) => void;
+  onLoginSuccess: (svnr: string) => void;
 }) {
   const [svnr, setSvnr] = useState(details.svnr);
   const [firstName, setFirstName] = useState(details.firstName);
@@ -35,6 +45,10 @@ export function ConfirmCardDataStep({
   const [carrierNumber, setCarrierNumber] = useState(details.carrierNumber);
   const [expiryDate, setExpiryDate] = useState(details.expiryDate);
   const [error, setError] = useState<string | null>(null);
+
+  const verifyIdentity = useVerifyIdentityMutation();
+  const loginWithIdAustria = useLoginWithIdAustriaMutation();
+  const isPending = verifyIdentity.isPending || loginWithIdAustria.isPending;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +67,36 @@ export function ConfirmCardDataStep({
     }
 
     setError(null);
-    onConfirm(svnr);
+    verifyIdentity.mutate(
+      { svnr, firstName, lastName, dateOfBirth, cardSerialNumber, carrierNumber, carrierName: details.carrierName, expiryDate },
+      {
+        onSuccess: (result) => {
+          if (intent === "register") {
+            if (result.alreadyRegistered) {
+              setError(
+                'Für diese Identität existiert bereits ein MedTrack-Konto. Wechseln Sie zu "Anmelden", ' +
+                  "um sich mit E-Mail und Passwort anzumelden.",
+              );
+              return;
+            }
+            onVerifiedForRegistration(result.verified.svnr);
+          } else {
+            if (!result.alreadyRegistered) {
+              setError(
+                'Für diese Identität wurde noch kein MedTrack-Konto erstellt. Wechseln Sie zu "Registrieren", ' +
+                  "um zuerst ein Konto anzulegen.",
+              );
+              return;
+            }
+            loginWithIdAustria.mutate(result.verified.svnr, {
+              onSuccess: () => onLoginSuccess(result.verified.svnr),
+              onError: (err) => setError(err instanceof ApiError ? err.message : "Anmeldung fehlgeschlagen."),
+            });
+          }
+        },
+        onError: (err) => setError(err instanceof ApiError ? err.message : "Überprüfung fehlgeschlagen."),
+      },
+    );
   };
 
   return (
@@ -63,14 +106,15 @@ export function ConfirmCardDataStep({
       </div>
       <h1>Daten überprüfen</h1>
       <p className="registration-step__intro">
-        Bitte überprüfen und vervollständigen Sie die e-card-Daten, bevor Sie fortfahren.
+        Bitte überprüfen und vervollständigen Sie die e-card-Daten, bevor Sie fortfahren. Diese Angaben
+        werden mit dem ID-Austria-Register verglichen.
       </p>
 
       <label>
         MedTrack-ID
         <input
           type="text"
-          value={details.medtrackId || "(wird nach Bestätigung zugewiesen)"}
+          value={details.medtrackId ?? "(wird nach Bestätigung zugewiesen)"}
           readOnly
         />
       </label>
@@ -125,8 +169,8 @@ export function ConfirmCardDataStep({
 
       {error && <p className="registration-step__error">{error}</p>}
 
-      <button type="submit" className="registration-step__cta">
-        Bestätigen
+      <button type="submit" className="registration-step__cta" disabled={isPending}>
+        {isPending ? "Wird überprüft…" : "Bestätigen"}
       </button>
       <button type="button" className="registration-step__back" onClick={onBack}>
         Zurück

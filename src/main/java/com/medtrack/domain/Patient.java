@@ -26,10 +26,15 @@ public class Patient {
     @Column(name = "medtrack_id", nullable = false, unique = true, length = 20)
     private String medtrackId;
 
-    // Only set for accounts created via standard (email/password) registration - null for the
-    // seeded demo patients and for ID-Austria-only accounts.
+    // Only set once a patient completes the ID-Austria registration flow (registration is the only
+    // way to set these - see RegistrationService.completeRegistration). Null means "identity exists
+    // in the ID-Austria registry / this Patient row exists, but no MedTrack account has been created
+    // for it yet".
     @Column(name = "email", unique = true)
     private String email;
+
+    @Column(name = "password_hash")
+    private String passwordHash;
 
     protected Patient() {
     }
@@ -74,5 +79,17 @@ public class Patient {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public boolean hasAccount() {
+        return passwordHash != null;
     }
 }

@@ -1,5 +1,9 @@
 package com.medtrack.api;
 
+import com.medtrack.domain.AccountAlreadyRegisteredException;
+import com.medtrack.domain.IdAustriaFieldMismatchException;
+import com.medtrack.domain.IdAustriaRecordNotFoundException;
+import com.medtrack.domain.InvalidCredentialsException;
 import com.medtrack.domain.PatientAlreadyExistsException;
 import com.medtrack.domain.PatientEmailAlreadyExistsException;
 import com.medtrack.domain.PatientNotFoundException;
@@ -42,5 +46,25 @@ public class ApiExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException exception) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exception.getMessage());
+    }
+
+    @ExceptionHandler(IdAustriaRecordNotFoundException.class)
+    public ResponseEntity<String> handleIdAustriaRecordNotFound(IdAustriaRecordNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(exception.getMessage());
+    }
+
+    @ExceptionHandler(IdAustriaFieldMismatchException.class)
+    public ResponseEntity<String> handleIdAustriaFieldMismatch(IdAustriaFieldMismatchException exception) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(exception.getMessage());
+    }
+
+    @ExceptionHandler(AccountAlreadyRegisteredException.class)
+    public ResponseEntity<String> handleAccountAlreadyRegistered(AccountAlreadyRegisteredException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(exception.getMessage());
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<String> handleInvalidCredentials(InvalidCredentialsException exception) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(exception.getMessage());
     }
 }

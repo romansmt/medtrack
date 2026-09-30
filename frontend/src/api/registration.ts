@@ -9,7 +9,7 @@ export interface IdAustriaIdentity {
 
 export interface ECardDetails {
   svnr: string;
-  medtrackId: string;
+  medtrackId: string | null;
   firstName: string;
   lastName: string;
   dateOfBirth: string;
@@ -17,6 +17,24 @@ export interface ECardDetails {
   carrierNumber: string;
   carrierName: string;
   expiryDate: string;
+}
+
+// What ConfirmCardDataStep submits for a real ID-Austria comparison - everything but medtrackId,
+// which is assigned by MedTrack, not asserted by the user.
+export type VerifyIdentityInput = Omit<ECardDetails, "medtrackId">;
+
+export interface VerifyIdentityResult {
+  verified: ECardDetails;
+  alreadyRegistered: boolean;
+}
+
+// A logged-in/just-registered account summary - deliberately smaller than ECardDetails, since only
+// the svnr is ever used afterward (to select the active patient).
+export interface Account {
+  svnr: string;
+  medtrackId: string;
+  name: string;
+  email: string | null;
 }
 
 export function useIdAustriaLoginMutation() {
@@ -33,26 +51,41 @@ export function useScanCardMutation() {
   });
 }
 
-// Registers a brand-new MedTrack account (not one of the 4 pre-seeded demo patients). Invalidates
-// the patients list so the header's dropdown includes the new account immediately, without a
-// full page reload. Shared by both the ID-Austria "Registrieren" tab (email omitted) and standard
-// registration (email set) - see CreateAccountRequest on the backend.
-export function useCreateAccountMutation() {
+// The real ID-Austria comparison: throws (via apiSend) with a specific message on a wrong SVNR or a
+// mismatched field list. `alreadyRegistered` tells the caller which follow-up step to take.
+export function useVerifyIdentityMutation() {
+  return useMutation({
+    mutationFn: (input: VerifyIdentityInput) =>
+      apiSend<VerifyIdentityResult>("POST", "/api/registration/verify-identity", input),
+  });
+}
+
+// Only called after verify-identity succeeded with alreadyRegistered=false - sets the email/password
+// that becomes this account's Standard-login credential.
+export function useCompleteRegistrationMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { fullName: string; dateOfBirth: string; email?: string }) =>
-      apiSend<ECardDetails>("POST", "/api/registration/create-account", input),
+    mutationFn: (input: { svnr: string; email: string; password: string }) =>
+      apiSend<Account>("POST", "/api/registration/complete-registration", input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["patients"] });
     },
   });
 }
 
-// Standard (non-ID-Austria) login by email - no password check happens anywhere, see
-// RegistrationController. Returns the same ECardDetails shape as the other flows so the caller can
-// selectPatient(details.svnr), but the UI never shows the e-card-specific fields for this path.
+// Only called after verify-identity succeeded with alreadyRegistered=true - logs straight in, no
+// password needed since ID Austria already proved the identity.
+export function useLoginWithIdAustriaMutation() {
+  return useMutation({
+    mutationFn: (svnr: string) => apiSend<Account>("POST", "/api/registration/login-with-id-austria", { svnr }),
+  });
+}
+
+// Standard (non-ID-Austria) login: Name, Surname, Email and Password compared against the account
+// created during registration.
 export function useStandardLoginMutation() {
   return useMutation({
-    mutationFn: (email: string) => apiSend<ECardDetails>("POST", "/api/registration/standard-login", { email }),
+    mutationFn: (input: { firstName: string; lastName: string; email: string; password: string }) =>
+      apiSend<Account>("POST", "/api/registration/standard-login", input),
   });
 }

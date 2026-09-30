@@ -1,5 +1,6 @@
 package com.medtrack.application.dto;
 
-// Password is intentionally not part of this DTO - see RegistrationController for why.
-public record StandardLoginRequest(String email) {
+// Compared against a Patient's own stored name/email/password - a check that's entirely separate
+// from ID-Austria verification. See RegistrationService.loginStandard.
+public record StandardLoginRequest(String firstName, String lastName, String email, String password) {
 }

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import { AppShell } from "./layout/AppShell";
-import { useAdmin } from "./hooks/useAdmin";
+import { useAdmin } from "./context/AdminContext";
 import { useConsent } from "./hooks/useConsent";
-import { useRegistration } from "./hooks/useRegistration";
+import { useRegistration } from "./context/RegistrationContext";
 import { AccountSheet } from "./pages/AccountSheet";
 import { AdminAccessModal } from "./pages/AdminAccessModal";
 import { AuthModal } from "./pages/AuthModal";

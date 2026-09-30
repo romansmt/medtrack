@@ -2,7 +2,9 @@ import { LocationPicker } from "../components/LocationPicker";
 import { NextOpenPharmacyCard } from "../components/NextOpenPharmacyCard";
 import { QuickLinkTile } from "../components/QuickLinkTile";
 import { SearchBar } from "../components/SearchBar";
+import { useAdmin } from "../context/AdminContext";
 import { usePatient } from "../context/PatientContext";
+import { useRegistration } from "../context/RegistrationContext";
 import "./HomePage.css";
 
 const quickLinks = [
@@ -14,10 +16,16 @@ const quickLinks = [
 
 export function HomePage() {
   const { selectedPatient } = usePatient();
+  const { isRegistered } = useRegistration();
+  const { isAdmin } = useAdmin();
 
   return (
     <section className="home-page">
-      {selectedPatient && (
+      {/* Before a real login/registration, selectedPatient still silently defaults to the first
+          seeded patient (so the demo pages have data to show) - that default isn't a real identity,
+          so this stays unpersonalized until isRegistered. Admin mode is an exception: picking a
+          patient from the switcher is a deliberate choice, not a silent default. */}
+      {(isRegistered || isAdmin) && selectedPatient && (
         <p className="home-page__welcome">
           Angemeldet als <strong>{selectedPatient.name}</strong> · MedTrack-ID:{" "}
           <strong>{selectedPatient.medtrackId}</strong>

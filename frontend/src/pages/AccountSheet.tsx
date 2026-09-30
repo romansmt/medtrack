@@ -45,7 +45,11 @@ export function AccountSheet({
         <div className="account-sheet__avatar">
           <Icon name="user" size={26} />
         </div>
-        {isRegistered && selectedPatient ? (
+        {isAdmin ? (
+          <div className="account-sheet__identity">
+            <span className="account-sheet__name">Admin</span>
+          </div>
+        ) : isRegistered && selectedPatient ? (
           <div className="account-sheet__identity">
             <span className="account-sheet__name">{selectedPatient.name}</span>
             <span className="account-sheet__medtrack-id">{selectedPatient.medtrackId}</span>
@@ -57,7 +61,10 @@ export function AccountSheet({
         )}
       </div>
 
-      {isRegistered && (
+      {/* Admin isn't a patient - the e-card/ID-Austria concept doesn't apply to it, so this row is
+          hidden entirely while isAdmin rather than showing stale info about whichever patient
+          happens to be selected in the switcher. */}
+      {!isAdmin && isRegistered && (
         <button type="button" className="account-sheet__link-row" onClick={onOpenAuth}>
           <span className="account-sheet__link-row-label">
             <Icon name="shield" size={16} />

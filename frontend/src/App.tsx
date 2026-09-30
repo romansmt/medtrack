@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Route, Routes } from "react-router-dom";
 import { AppShell } from "./layout/AppShell";
+import { useAdmin } from "./hooks/useAdmin";
 import { useConsent } from "./hooks/useConsent";
 import { useRegistration } from "./hooks/useRegistration";
 import { AccountSheet } from "./pages/AccountSheet";
+import { AdminAccessModal } from "./pages/AdminAccessModal";
 import { AuthModal } from "./pages/AuthModal";
 import { ConsentPage } from "./pages/ConsentPage";
 import { FavoritesPage } from "./pages/FavoritesPage";
@@ -18,10 +20,12 @@ import { SearchPage } from "./pages/SearchPage";
 export function App() {
   const { hasConsented, giveConsent } = useConsent();
   const { isRegistered, isLinked, completeRegistration } = useRegistration();
-  // Both start closed - neither is ever forced open. Reached only via the header's account button,
-  // the "not linked" banner, or a deliberate "Anmelden" tap inside the account sheet.
+  const { isAdmin, setIsAdmin } = useAdmin();
+  // All three start closed - none is ever forced open. Reached only via the header's account
+  // button, the "not linked" banner, or a deliberate tap inside the account sheet.
   const [accountSheetOpen, setAccountSheetOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [adminAccessModalOpen, setAdminAccessModalOpen] = useState(false);
 
   if (!hasConsented) {
     return <ConsentPage onAccept={giveConsent} />;
@@ -34,6 +38,7 @@ export function App() {
           element={
             <AppShell
               isLinked={isLinked}
+              isAdmin={isAdmin}
               onOpenAuthModal={() => setAuthModalOpen(true)}
               onOpenAccount={() => setAccountSheetOpen(true)}
             />
@@ -54,10 +59,16 @@ export function App() {
         <AccountSheet
           isRegistered={isRegistered}
           isLinked={isLinked}
+          isAdmin={isAdmin}
           onOpenAuth={() => {
             setAccountSheetOpen(false);
             setAuthModalOpen(true);
           }}
+          onOpenAdminAccess={() => {
+            setAccountSheetOpen(false);
+            setAdminAccessModalOpen(true);
+          }}
+          onDeactivateAdmin={() => setIsAdmin(false)}
           onClose={() => setAccountSheetOpen(false)}
         />
       )}
@@ -69,6 +80,16 @@ export function App() {
             setAuthModalOpen(false);
           }}
           onCancel={() => setAuthModalOpen(false)}
+        />
+      )}
+
+      {adminAccessModalOpen && (
+        <AdminAccessModal
+          onSuccess={() => {
+            setIsAdmin(true);
+            setAdminAccessModalOpen(false);
+          }}
+          onCancel={() => setAdminAccessModalOpen(false)}
         />
       )}
     </>

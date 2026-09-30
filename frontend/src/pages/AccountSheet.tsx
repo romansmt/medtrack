@@ -16,12 +16,18 @@ const PLACEHOLDER_ITEMS: { icon: IconName; label: string }[] = [
 export function AccountSheet({
   isRegistered,
   isLinked,
+  isAdmin,
   onOpenAuth,
+  onOpenAdminAccess,
+  onDeactivateAdmin,
   onClose,
 }: {
   isRegistered: boolean;
   isLinked: boolean;
+  isAdmin: boolean;
   onOpenAuth: () => void;
+  onOpenAdminAccess: () => void;
+  onDeactivateAdmin: () => void;
   onClose: () => void;
 }) {
   const { selectedPatient } = usePatient();
@@ -60,6 +66,14 @@ export function AccountSheet({
           {!isLinked && <Icon name="chevron" size={16} />}
         </button>
       )}
+
+      <button type="button" className="account-sheet__link-row" onClick={isAdmin ? onDeactivateAdmin : onOpenAdminAccess}>
+        <span className="account-sheet__link-row-label">
+          <Icon name="settings" size={16} />
+          {isAdmin ? "Admin-Modus aktiv - Tippen zum Beenden" : "Admin-Zugang"}
+        </span>
+        {!isAdmin && <Icon name="chevron" size={16} />}
+      </button>
 
       <div className="account-sheet__list">
         {PLACEHOLDER_ITEMS.map((item) => (

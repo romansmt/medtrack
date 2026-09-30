@@ -413,6 +413,24 @@ try { Invoke-WebRequest -Uri "http://localhost:8080/api/registration/standard-lo
 ```
 Expect: `create-account` returns a full `ECardDetailsResponse` (SVNR/card fields included, even though the Standard UI never shows them); `standard-login` with the registered email returns the same record; the unknown email returns `STATUS=404`. Note there's no password field in either request - see the note above about why.
 
+### 4.9 Admin mode (patient switcher access)
+
+Switching between patients via the header dropdown is an admin-only capability - everyone else gets a plain read-only display of their own current name (`frontend/src/layout/PatientSelector.tsx`), with no dropdown and no way to discover that other patients even exist. This is a demo/testing convenience, not a real authorization system: it doesn't gate the API in any way (every endpoint above already works for any SVNR you pass it), it only controls whether the *frontend* shows the switcher.
+
+**Admin access code: `MEDTRACK-ADMIN-2026`** (`MockAdminAuthAdapter.ACCESS_CODE`). Like every other mock credential in this project, it's intentionally public - documented here so anyone testing MedTrack can use it, not meant to imply real security.
+
+To activate it: open "Mein Konto" (the account icon in the header) → "Admin-Zugang" → enter the code above → "Bestätigen". The header's patient dropdown appears immediately, no reload needed. To deactivate: open "Mein Konto" again → "Admin-Modus aktiv - Tippen zum Beenden". The flag is purely a local `localStorage` value (`medtrack.isAdmin`) - it doesn't survive `localStorage.clear()` and isn't tied to whichever patient is currently selected.
+
+Raw API check:
+```powershell
+$body = @{ code = "MEDTRACK-ADMIN-2026" } | ConvertTo-Json
+Invoke-WebRequest -Uri "http://localhost:8080/api/admin/verify-code" -Method POST -Body $body -ContentType "application/json"
+
+$body = @{ code = "wrong-code" } | ConvertTo-Json
+try { Invoke-WebRequest -Uri "http://localhost:8080/api/admin/verify-code" -Method POST -Body $body -ContentType "application/json" } catch { Write-Output "STATUS=$($_.Exception.Response.StatusCode.value__)" }
+```
+Expect: `204` for the correct code, `STATUS=401` for anything else. No session or token is returned either way - see `AdminController`.
+
 ## 5. Project structure
 
 ```

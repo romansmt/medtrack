@@ -72,6 +72,14 @@
   padding-right: 10px;
 }
 
+.patient-selector--readonly {
+  border-color: transparent;
+  background: none;
+  font-weight: 600;
+  cursor: default;
+  text-align: right;
+}
+
 .patient-selector--status {
   font-size: 0.85rem;
   color: var(--color-text-muted);

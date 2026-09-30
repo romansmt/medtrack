@@ -8,10 +8,12 @@ import "./AppShell.css";
 
 export function AppShell({
   isLinked,
+  isAdmin,
   onOpenAuthModal,
   onOpenAccount,
 }: {
   isLinked: boolean;
+  isAdmin: boolean;
   onOpenAuthModal: () => void;
   onOpenAccount: () => void;
 }) {
@@ -33,7 +35,7 @@ export function AppShell({
           ))}
         </nav>
         <div className="app-header__account-group">
-          <PatientSelector />
+          <PatientSelector isAdmin={isAdmin} />
           <button type="button" className="account-button" onClick={onOpenAccount} aria-label="Mein Konto">
             <Icon name="user" size={20} />
           </button>

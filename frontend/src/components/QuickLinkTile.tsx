@@ -5,7 +5,9 @@ import "./QuickLinkTile.css";
 export function QuickLinkTile({ to, icon, label }: { to: string; icon: IconName; label: string }) {
   return (
     <Link to={to} className="quick-link-tile">
-      <Icon name={icon} size={24} />
+      <span className="quick-link-tile__icon">
+        <Icon name={icon} size={20} />
+      </span>
       <span>{label}</span>
     </Link>
   );

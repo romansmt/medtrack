@@ -27,11 +27,6 @@ public interface EHealthCardPort {
     // Patient already has a password set.
     Patient completeRegistration(String svnr, String email, String password);
 
-    // "Mit ID Austria" login for an already-registered account: re-verifies the SVNR still resolves
-    // in the registry, then looks up the matching Patient. Throws java.util.NoSuchElementException if
-    // no Patient row exists yet, or it exists but has no password set (not registered yet).
-    Patient loginWithIdAustria(String svnr);
-
     // Standard (non-ID-Austria) login: looks a Patient up by email, then checks the submitted
     // name/surname and password against the stored record. Throws java.util.NoSuchElementException
     // if the email is unknown ("no such user"), or InvalidCredentialsException if the name or

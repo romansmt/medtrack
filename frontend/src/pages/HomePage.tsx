@@ -1,10 +1,15 @@
+import { useMemo } from "react";
+import { useNearbyPharmaciesQuery } from "../api/pharmacies";
 import { LocationPicker } from "../components/LocationPicker";
-import { NextOpenPharmacyCard } from "../components/NextOpenPharmacyCard";
+import { NearbyPharmaciesRow } from "../components/NearbyPharmaciesRow";
+import { PharmacyMap } from "../components/PharmacyMap";
+import { PopularMedicationsRow } from "../components/PopularMedicationsRow";
 import { QuickLinkTile } from "../components/QuickLinkTile";
 import { SearchBar } from "../components/SearchBar";
 import { useAdmin } from "../context/AdminContext";
 import { usePatient } from "../context/PatientContext";
 import { useRegistration } from "../context/RegistrationContext";
+import { useUserLocation } from "../context/UserLocationContext";
 import "./HomePage.css";
 
 const quickLinks = [
@@ -14,10 +19,18 @@ const quickLinks = [
   { to: "/favorites", icon: "heart", label: "Meine Lieblingsapotheken" },
 ] as const;
 
+// The hero map only needs enough pins to look alive, not the full nearby list (NearbyPharmaciesRow
+// below fetches and shows more) - capped separately so a dense city center doesn't clutter it.
+const HERO_MAP_PHARMACY_LIMIT = 8;
+
 export function HomePage() {
   const { selectedPatient } = usePatient();
   const { isRegistered } = useRegistration();
   const { isAdmin } = useAdmin();
+  const { location } = useUserLocation();
+  const { data: nearby } = useNearbyPharmaciesQuery(location?.lat, location?.lng);
+
+  const heroMapPharmacies = useMemo(() => (nearby ?? []).slice(0, HERO_MAP_PHARMACY_LIMIT), [nearby]);
 
   return (
     <section className="home-page">
@@ -32,14 +45,33 @@ export function HomePage() {
         </p>
       )}
 
-      <div className="home-page__hero">
-        <h1>Österreichs Apotheken. Immer für Sie da!</h1>
-        <p>Hier finden Sie Apotheken in Ihrer Nähe, aktuelle Öffnungszeiten und verfügbare Medikamente.</p>
+      <div className="home-hero">
+        <div className="home-hero__panel">
+          <span className="home-hero__eyebrow">Ihre Apotheke, digital</span>
+          <h1>
+            Österreichs Apotheken.
+            <br />
+            Immer für Sie da.
+          </h1>
+          <p>
+            Finden Sie geöffnete Apotheken in Ihrer Nähe, prüfen Sie die Verfügbarkeit von
+            Medikamenten und behalten Sie Ihren Einnahmeplan im Blick.
+          </p>
+          <div className="home-hero__controls">
+            <SearchBar />
+            <LocationPicker />
+          </div>
+        </div>
+        <div className="home-hero__map">
+          {location ? (
+            <PharmacyMap pharmacies={heroMapPharmacies} center={location} />
+          ) : (
+            <div className="home-hero__map-placeholder">
+              <span>Standort festlegen, um Apotheken auf der Karte zu sehen.</span>
+            </div>
+          )}
+        </div>
       </div>
-
-      <SearchBar />
-
-      <LocationPicker />
 
       <div className="home-page__tiles">
         {quickLinks.map((link) => (
@@ -47,7 +79,9 @@ export function HomePage() {
         ))}
       </div>
 
-      <NextOpenPharmacyCard />
+      <NearbyPharmaciesRow />
+
+      <PopularMedicationsRow />
     </section>
   );
 }

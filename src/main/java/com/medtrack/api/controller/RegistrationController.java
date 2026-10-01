@@ -5,7 +5,6 @@ import com.medtrack.application.dto.CompleteRegistrationRequest;
 import com.medtrack.application.dto.ECardDetailsResponse;
 import com.medtrack.application.dto.IdAustriaLoginRequest;
 import com.medtrack.application.dto.IdAustriaLoginResponse;
-import com.medtrack.application.dto.LoginWithIdAustriaRequest;
 import com.medtrack.application.dto.ScanCardRequest;
 import com.medtrack.application.dto.StandardLoginRequest;
 import com.medtrack.application.dto.VerifyIdentityRequest;
@@ -56,13 +55,6 @@ public class RegistrationController {
             + "this account's Standard-login credential. 409 if this identity already has an account.")
     public AccountResponse completeRegistration(@RequestBody CompleteRegistrationRequest request) {
         return registrationService.completeRegistration(request);
-    }
-
-    @PostMapping("/login-with-id-austria")
-    @Operation(summary = "Log in to an existing account after verify-identity succeeded. 404 if this identity has "
-            + "no MedTrack account yet (i.e. it still needs to register).")
-    public AccountResponse loginWithIdAustria(@RequestBody LoginWithIdAustriaRequest request) {
-        return registrationService.loginWithIdAustria(request.svnr());
     }
 
     @PostMapping("/standard-login")

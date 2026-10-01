@@ -41,19 +41,20 @@ comparison against `id_austria_registry`, not just an SVNR-birthdate consistency
 
 ### Pre-registered demo accounts (Standard login)
 
-Three of the four - **not Paul Wagner** - already have a MedTrack account (email + password), seeded
-idempotently at every app startup by `DemoAccountSeeder` so Standard login works immediately. Same
-"fake and intentionally public" spirit as the admin access code below.
+All four already have a full MedTrack account (email + password), seeded idempotently at every app
+startup by `DemoAccountSeeder` - they simulate patients who already completed ID-Austria registration,
+so Standard login (the only way to log in - see DEVELOPMENT.md §4.8) works immediately for all of
+them. Same "fake and intentionally public" spirit as the admin access code below.
 
 | Patient | E-Mail | Passwort |
 |---|---|---|
 | Anna Gruber | `anna.gruber@demo.medtrack.local` | `MedTrack2026!` |
 | Max Bauer | `max.bauer@demo.medtrack.local` | `MedTrack2026!` |
 | Lena Hofer | `lena.hofer@demo.medtrack.local` | `MedTrack2026!` |
+| Paul Wagner | `paul.wagner@demo.medtrack.local` | `MedTrack2026!` |
 
-**Paul Wagner has no password set** - he's deliberately left as the one seeded identity for manually
-walking through the full registration flow (ID-Austria verification, then set your own email/password
-on the "Konto abschließen" step). Once you register him, Standard login works for him too.
+Since all four are already registered, there's no seeded identity left to walk through a *fresh*
+registration with out of the box - see "Registering your own" below for how to free one up.
 
 ## Patients - created ad hoc in this dev database (pre-dates the registry hardening)
 
@@ -73,9 +74,18 @@ historical record of dev-database drift, not as working test accounts.
 
 ## Registering your own
 
-Unlike before, you can **not** register an arbitrary invented name/birthdate anymore - registration
-now requires a real match against the ID-Austria registry (`id_austria_registry`, seeded by
-`V11__id_austria_registry.sql`), which only contains the four patients in the table above. **Paul
-Wagner** is the one with no password set yet, so he's the one to use for a fresh end-to-end
-registration walkthrough. See DEVELOPMENT.md §4.8 for the full golden path and the deliberate-error
-(wrong SVNR / mismatched field) test cases.
+You can **not** register an arbitrary invented name/birthdate - registration requires a real match
+against the ID-Austria registry (`id_austria_registry`, seeded by `V11__id_austria_registry.sql`),
+which only contains the four patients in the table above, and all four already have an account (see
+above). To test a *fresh* registration end-to-end, free one up first by clearing its credentials
+directly in the database, e.g. for Paul Wagner:
+
+```sql
+UPDATE patient SET email = NULL, password_hash = NULL WHERE svnr = '4567040475';
+```
+
+Run that against the already-running app's database - no restart needed, the next request already
+sees the cleared row. Paul is then registerable again via "Registrieren", using his row in the table
+above. **Don't restart the app afterward**: `DemoAccountSeeder` runs on every startup and will
+immediately re-seed his demo credentials again as soon as it sees a missing password. See DEVELOPMENT.md §4.8 for the full golden
+path and the deliberate-error (wrong SVNR / mismatched field) test cases.

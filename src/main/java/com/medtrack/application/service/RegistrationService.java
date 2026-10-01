@@ -71,11 +71,6 @@ public class RegistrationService {
     }
 
     @Transactional(readOnly = true)
-    public AccountResponse loginWithIdAustria(String svnr) {
-        return toAccountResponse(eHealthCardPort.loginWithIdAustria(svnr));
-    }
-
-    @Transactional(readOnly = true)
     public AccountResponse loginStandard(StandardLoginRequest request) {
         Patient patient = eHealthCardPort.loginWithCredentials(
                 request.firstName(), request.lastName(), request.email(), request.password());

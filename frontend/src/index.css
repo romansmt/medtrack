@@ -29,3 +29,49 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* Shared by Home's horizontal-scrolling rows (NearbyPharmaciesRow, PopularMedicationsRow) - kept
+   here rather than duplicated per component since both need identical scroll mechanics. */
+.scroll-row {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-row > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.scroll-row::-webkit-scrollbar {
+  height: 6px;
+}
+
+.scroll-row::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+/* Shared "section title + see-all link" header, same two rows above. */
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.section-header__link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
+}

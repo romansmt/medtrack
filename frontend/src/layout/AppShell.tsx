@@ -22,7 +22,12 @@ export function AppShell({
   return (
     <div className="app-shell">
       <header className="app-header">
-        <span className="app-logo">MedTrack</span>
+        <span className="app-logo">
+          <span className="app-logo__mark">
+            <Icon name="pill" size={16} />
+          </span>
+          MedTrack
+        </span>
         <nav className="desktop-nav" aria-label="Hauptnavigation">
           {allNavItems.map((item) => (
             <NavLink

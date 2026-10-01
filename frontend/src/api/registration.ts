@@ -73,16 +73,8 @@ export function useCompleteRegistrationMutation() {
   });
 }
 
-// Only called after verify-identity succeeded with alreadyRegistered=true - logs straight in, no
-// password needed since ID Austria already proved the identity.
-export function useLoginWithIdAustriaMutation() {
-  return useMutation({
-    mutationFn: (svnr: string) => apiSend<Account>("POST", "/api/registration/login-with-id-austria", { svnr }),
-  });
-}
-
 // Standard (non-ID-Austria) login: Name, Surname, Email and Password compared against the account
-// created during registration.
+// created during registration. The only login method - see AuthEntryStep.
 export function useStandardLoginMutation() {
   return useMutation({
     mutationFn: (input: { firstName: string; lastName: string; email: string; password: string }) =>

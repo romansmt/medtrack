@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { ApiError } from "../../api/client";
-import {
-  useLoginWithIdAustriaMutation,
-  useVerifyIdentityMutation,
-  type ECardDetails,
-} from "../../api/registration";
+import { useVerifyIdentityMutation, type ECardDetails } from "../../api/registration";
 import { Icon } from "../../layout/Icon";
 
 // Mirrors MockIdAustriaAuthAdapter's SVNR decoding - re-derives the birthdate from whatever SVNR is
@@ -22,20 +18,20 @@ function birthDateFromSvnr(svnr: string): string | null {
   return `${fullYear}-${month}-${day}`;
 }
 
+// Only ever reached on the registration path now (see AuthModal) - confirms the e-card data matches
+// the ID-Austria registry, then hands off to CreateCredentialsStep. An identity that's already
+// registered is rejected here with an "already exists" message rather than silently logging in -
+// logging in is Anmelden's job (AuthEntryStep), not this step's.
 export function ConfirmCardDataStep({
   details,
   registeredDateOfBirth,
-  intent,
   onBack,
-  onVerifiedForRegistration,
-  onLoginSuccess,
+  onVerified,
 }: {
   details: ECardDetails;
   registeredDateOfBirth: string;
-  intent: "login" | "register";
   onBack: () => void;
-  onVerifiedForRegistration: (svnr: string) => void;
-  onLoginSuccess: (svnr: string) => void;
+  onVerified: (svnr: string) => void;
 }) {
   const [svnr, setSvnr] = useState(details.svnr);
   const [firstName, setFirstName] = useState(details.firstName);
@@ -47,8 +43,6 @@ export function ConfirmCardDataStep({
   const [error, setError] = useState<string | null>(null);
 
   const verifyIdentity = useVerifyIdentityMutation();
-  const loginWithIdAustria = useLoginWithIdAustriaMutation();
-  const isPending = verifyIdentity.isPending || loginWithIdAustria.isPending;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,28 +65,14 @@ export function ConfirmCardDataStep({
       { svnr, firstName, lastName, dateOfBirth, cardSerialNumber, carrierNumber, carrierName: details.carrierName, expiryDate },
       {
         onSuccess: (result) => {
-          if (intent === "register") {
-            if (result.alreadyRegistered) {
-              setError(
-                'Für diese Identität existiert bereits ein MedTrack-Konto. Wechseln Sie zu "Anmelden", ' +
-                  "um sich mit E-Mail und Passwort anzumelden.",
-              );
-              return;
-            }
-            onVerifiedForRegistration(result.verified.svnr);
-          } else {
-            if (!result.alreadyRegistered) {
-              setError(
-                'Für diese Identität wurde noch kein MedTrack-Konto erstellt. Wechseln Sie zu "Registrieren", ' +
-                  "um zuerst ein Konto anzulegen.",
-              );
-              return;
-            }
-            loginWithIdAustria.mutate(result.verified.svnr, {
-              onSuccess: () => onLoginSuccess(result.verified.svnr),
-              onError: (err) => setError(err instanceof ApiError ? err.message : "Anmeldung fehlgeschlagen."),
-            });
+          if (result.alreadyRegistered) {
+            setError(
+              'Für diese Identität existiert bereits ein MedTrack-Konto. Wechseln Sie zu "Anmelden", ' +
+                "um sich mit E-Mail und Passwort anzumelden.",
+            );
+            return;
           }
+          onVerified(result.verified.svnr);
         },
         onError: (err) => setError(err instanceof ApiError ? err.message : "Überprüfung fehlgeschlagen."),
       },
@@ -169,8 +149,8 @@ export function ConfirmCardDataStep({
 
       {error && <p className="registration-step__error">{error}</p>}
 
-      <button type="submit" className="registration-step__cta" disabled={isPending}>
-        {isPending ? "Wird überprüft…" : "Bestätigen"}
+      <button type="submit" className="registration-step__cta" disabled={verifyIdentity.isPending}>
+        {verifyIdentity.isPending ? "Wird überprüft…" : "Bestätigen"}
       </button>
       <button type="button" className="registration-step__back" onClick={onBack}>
         Zurück

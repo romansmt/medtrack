@@ -79,19 +79,6 @@ public class MockEHealthCardAdapter implements EHealthCardPort {
     }
 
     @Override
-    public Patient loginWithIdAustria(String svnr) {
-        registryRepository.findBySvnr(svnr)
-                .orElseThrow(() -> new IdAustriaRecordNotFoundException(svnr));
-
-        Patient patient = patientRepository.findBySvnr(svnr)
-                .orElseThrow(() -> new NoSuchElementException("No MedTrack account registered yet for SVNR " + svnr));
-        if (!patient.hasAccount()) {
-            throw new NoSuchElementException("No MedTrack account registered yet for SVNR " + svnr);
-        }
-        return patient;
-    }
-
-    @Override
     public Patient loginWithCredentials(String firstName, String lastName, String email, String rawPassword) {
         Patient patient = patientRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new NoSuchElementException("No account found for email " + email));

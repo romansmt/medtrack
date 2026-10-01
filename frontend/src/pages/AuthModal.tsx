@@ -12,15 +12,14 @@ type Step = "start" | "scan" | "confirm" | "credentials";
 // The Anmelden/Registrieren overlay. Opened deliberately from the header's account button or the
 // "not linked" banner (see App.tsx) - never forced open. Sits on top of the app, not in place of it:
 // routes keep rendering underneath, closing this just removes the component, no navigation involved.
+//
+// scan/confirm/credentials only ever happen on the registration path now - login is a single
+// credential form (see AuthEntryStep) that resolves straight from "start" via onStandardLoginSuccess.
 export function AuthModal({ onSuccess, onCancel }: { onSuccess: (linked: boolean) => void; onCancel: () => void }) {
   const { selectPatient } = usePatient();
   const [step, setStep] = useState<Step>("start");
   const [identity, setIdentity] = useState<IdAustriaLoginResult | null>(null);
   const [cardDetails, setCardDetails] = useState<ECardDetails | null>(null);
-  // Registration always goes through scan -> confirm -> credentials; login stops at confirm (either
-  // logging straight in or telling the user to register first). "Zurück" on confirm needs to know
-  // which step to return to.
-  const [cameFromRegister, setCameFromRegister] = useState(false);
   const [verifiedSvnr, setVerifiedSvnr] = useState<string | null>(null);
 
   return (
@@ -40,9 +39,8 @@ export function AuthModal({ onSuccess, onCancel }: { onSuccess: (linked: boolean
 
         {step === "start" && (
           <AuthEntryStep
-            onIdAustriaSuccess={(result, isRegister) => {
+            onIdAustriaSuccess={(result) => {
               setIdentity(result);
-              setCameFromRegister(isRegister);
               setStep("scan");
             }}
             onStandardLoginSuccess={(svnr) => {
@@ -82,15 +80,10 @@ export function AuthModal({ onSuccess, onCancel }: { onSuccess: (linked: boolean
           <ConfirmCardDataStep
             details={cardDetails}
             registeredDateOfBirth={identity.dateOfBirth}
-            intent={cameFromRegister ? "register" : "login"}
-            onBack={() => setStep(cameFromRegister ? "start" : "scan")}
-            onVerifiedForRegistration={(svnr) => {
+            onBack={() => setStep("scan")}
+            onVerified={(svnr) => {
               setVerifiedSvnr(svnr);
               setStep("credentials");
-            }}
-            onLoginSuccess={(svnr) => {
-              selectPatient(svnr);
-              onSuccess(true);
             }}
           />
         )}
